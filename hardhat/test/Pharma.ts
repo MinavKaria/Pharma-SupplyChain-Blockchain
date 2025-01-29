@@ -43,5 +43,14 @@ describe("AdvancedSupplyChain Contract", function () {
 
   });
 
+  describe("Add a batch of medicine",async function () {
+    const qr={
+      name: "Paracetamol",
+    }
+    const qrCode=JSON.stringify(qr);
+    const id= supplyChain.createBatch(qrCode,100);
+    console.log(id);
+  });
+
   
 });

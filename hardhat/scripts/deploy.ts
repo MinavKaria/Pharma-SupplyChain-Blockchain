@@ -10,6 +10,7 @@ async function main() {
     console.log("Deploying contract...");
     await contract.waitForDeployment(); 
     console.log(`SimpleContract deployed to: ${contract.target}`);
+    
   } catch (error) {
     console.error(error);
     process.exit(1);

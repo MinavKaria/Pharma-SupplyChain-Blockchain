@@ -1,6 +1,7 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import React from 'react'
 import { useNavigate } from 'react-router-dom';
+import { CuboidIcon as Cube } from "lucide-react"
 
 function Navbar2() {
     const navigate=useNavigate();
@@ -9,9 +10,10 @@ function Navbar2() {
         <div>
             <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
                 <div>
-                <p className="text-xl font-bold text-gray-800 cursor-pointer" onClick={()=>{
+                <div className="flex justify-center items-center text-xl font-bold text-gray-800 cursor-pointer" onClick={()=>{
                     navigate("/");
-                }}>Pharma Supply Chain</p>
+                }}><Cube className="h-6 w-6 mr-2" />
+                  <span className="font-bold">BlockChainSCM</span></div>
                 </div>
                 <div>
                 <ConnectButton/>

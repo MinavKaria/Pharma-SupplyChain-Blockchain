@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0.0;
+pragma solidity ^0.8.28;
 
-contract AdvancedSupplyChain {
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract AdvancedSupplyChain is Ownable(msg.sender){
 
     enum Role { 
+        Customer,
         Supplier, 
         Manufacturer, 
         Distributor, 
-        Retailer,
-        Customer
+        Retailer
     }
 
     struct Transfer {
@@ -41,18 +43,9 @@ contract AdvancedSupplyChain {
     );
     event RoleAssigned(address indexed user, Role role);
 
-
-    address public owner;
-
-    constructor() {
-        owner = msg.sender;
+    constructor() payable {
         userRoles[msg.sender] = Role.Supplier;
         isRegistered[msg.sender] = true;
-    }
-
-    modifier onlyAdmin() {
-        require(msg.sender == owner, "Only admin can perform this action");
-        _;
     }
 
     modifier onlyRole(Role _role) {
@@ -65,18 +58,25 @@ contract AdvancedSupplyChain {
         _;
     }
 
-    function assignRole(address _user, Role _role) external onlyAdmin {
+    function assignRole(address _user, Role _role) external onlyOwner {
         require(!isRegistered[_user], "User already registered");
         userRoles[_user] = _role;
         isRegistered[_user] = true;
         emit RoleAssigned(_user, _role);
     }
 
+
+    function revokeRole(address _user) external onlyOwner {
+        require(isRegistered[_user], "User is not registered");
+        isRegistered[_user] = false;
+        userRoles[_user]=Role.Customer;
+    }
+
     function createBatch(
         string memory _productData, 
         uint256 _quantity
     ) external onlyRole(Role.Supplier) returns (uint256) {
-        require(_quantity > 0, "Quantity must be greater than zero");
+        require(_quantity != 0, "Quantity must be greater than zero");
 
         uint256 batchId = batches.length; 
 
@@ -98,22 +98,22 @@ contract AdvancedSupplyChain {
         uint256 _batchId, 
         address _recipient,
         uint256 _quantity
-    ) external validBatch(_batchId) {
-        require(_quantity > 0, "Quantity must be greater than zero");
-        require(isRegistered[_recipient], "Recipient is not registered");
+    ) external validBatch(_batchId){
+        require(isRegistered[msg.sender], "Sender not registered");
+        require(_quantity != 0, "Quantity must be greater than zero");
 
         ProductBatch storage batch = batches[_batchId];
         require(batchQuantities[_batchId][msg.sender] >= _quantity, "Insufficient quantity in batch");
         
         Role senderRole = userRoles[msg.sender];
+        Role recipientRole = userRoles[_recipient];
         require(
-        (senderRole == Role.Supplier && userRoles[_recipient] == Role.Manufacturer) ||
-        (senderRole == Role.Manufacturer && userRoles[_recipient] == Role.Distributor) ||
-        (senderRole == Role.Distributor && userRoles[_recipient] == Role.Retailer) ||
-        (senderRole == Role.Retailer && userRoles[_recipient] == Role.Customer),
+        (senderRole == Role.Supplier && recipientRole == Role.Manufacturer) ||
+        (senderRole == Role.Manufacturer && recipientRole == Role.Distributor) ||
+        (senderRole == Role.Distributor && recipientRole == Role.Retailer) ||
+        (senderRole == Role.Retailer && (recipientRole!=Role.Manufacturer && recipientRole!=Role.Distributor && recipientRole!=Role.Supplier && recipientRole!=Role.Retailer)),
             "Unauthorized transfer"
         );
-
 
         batchQuantities[_batchId][msg.sender] -= _quantity;
         batchQuantities[_batchId][_recipient] += _quantity;
@@ -140,6 +140,8 @@ contract AdvancedSupplyChain {
         address[] memory chainOfCustody,
         Transfer[] memory transfers
     ) {
+        require(batches.length > _batchId , "Invalid batch ID");
+
         ProductBatch storage batch = batches[_batchId];
         return (
             batch.productData,
@@ -170,7 +172,7 @@ contract AdvancedSupplyChain {
         uint256[] memory quantityTransferred= new uint256[](length);
 
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             ProductBatch storage batch = batches[i];
             ids[i] = batch.id;
             productDatas[i] = batch.productData;
@@ -190,8 +192,8 @@ contract AdvancedSupplyChain {
     ) {
         uint256 totalTransfers = 0;
 
-        for (uint256 i = 0; i < batches.length; i++) {
-            for (uint256 j = 0; j < batches[i].transfers.length; j++) {
+        for (uint256 i = 0; i < batches.length; ++i) {
+            for (uint256 j = 0; j < batches[i].transfers.length; ++j) {
                 if (batches[i].transfers[j].from == _user || batches[i].transfers[j].to == _user) {
                     totalTransfers++;
                 }
@@ -205,8 +207,8 @@ contract AdvancedSupplyChain {
 
         uint256 index = 0;
 
-        for (uint256 i = 0; i < batches.length; i++) {
-            for (uint256 j = 0; j < batches[i].transfers.length; j++) {
+        for (uint256 i = 0; i < batches.length; ++i) {
+            for (uint256 j = 0; j < batches[i].transfers.length; ++j) {
                 if (batches[i].transfers[j].from == _user || batches[i].transfers[j].to == _user) {
                     batchIds[index] = i;
                     fromAddresses[index] = batches[i].transfers[j].from;
@@ -220,10 +222,5 @@ contract AdvancedSupplyChain {
         return (batchIds, fromAddresses, toAddresses, quantities);
     }
 
-    function applyAsCustomer() public{
-        require(!isRegistered[msg.sender], "User already registered");
-        userRoles[msg.sender]=Role.Customer;
-        isRegistered[msg.sender] = true;
-        emit RoleAssigned(msg.sender, Role.Customer);
-    }
+   
 }

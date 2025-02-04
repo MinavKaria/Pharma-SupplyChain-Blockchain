@@ -3,6 +3,7 @@ import Layout from "../pages/Layout";
 import Landing from "../pages/Landing";
 import Login from "../pages/Login";
 import Profile from "@/pages/Profile";
+import RoleApplicationForm from "@/pages/ApplyForRole";
 
 
 const router=createBrowserRouter([
@@ -19,6 +20,14 @@ const router=createBrowserRouter([
                 element:(
                     <>
                         <Profile/>
+                    </>
+                )
+            },
+            {
+                path:'/apply',
+                element:(
+                    <>
+                        <RoleApplicationForm/>
                     </>
                 )
             }

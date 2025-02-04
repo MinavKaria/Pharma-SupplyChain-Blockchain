@@ -57,11 +57,14 @@ const connectors = connectorsForWallets(
   }
 );
 
+// @ts-ignore
 const config = getDefaultConfig({
   appName: 'My RainbowKit App',
   projectId,
   chains: [localhost, mainnet, polygon, optimism, arbitrum, base, sepolia],
   ssr: true,
+  // @ts-ignore
+  walletConnectVersion: "2",
   transports: {
     [localhost.id]: http(`http://localhost:8545`),
     [mainnet.id]: http(),

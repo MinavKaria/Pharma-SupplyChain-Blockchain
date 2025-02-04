@@ -62,7 +62,6 @@ const config = getDefaultConfig({
   projectId,
   chains: [localhost, mainnet, polygon, optimism, arbitrum, base, sepolia],
   ssr: true,
-  walletConnectVersion: "2",
   transports: {
     [localhost.id]: http(`http://localhost:8545`),
     [mainnet.id]: http(),
@@ -72,6 +71,7 @@ const config = getDefaultConfig({
     [base.id]: http(),
     [sepolia.id]: http()
   },
+  // @ts-ignore
   connectors
 });
 

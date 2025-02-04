@@ -1,8 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import Layout from "../pages/Layout";
 import Landing from "../pages/Landing";
-import Login from "../pages/Login";
-import Profile from "@/pages/Profile";
+// import Profile from "@/pages/Profile";
 import RoleApplicationForm from "@/pages/ApplyForRole";
 
 
@@ -19,7 +18,7 @@ const router=createBrowserRouter([
                 path:'/profile',
                 element:(
                     <>
-                        <Profile/>
+                        <h1>Profile</h1>
                     </>
                 )
             },
@@ -45,7 +44,7 @@ const router=createBrowserRouter([
         path:"/login",
         element:(
             <>
-                <Login/>
+                <h1>Login</h1>
             </>
         )
     },

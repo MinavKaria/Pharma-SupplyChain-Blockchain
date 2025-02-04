@@ -1,5 +1,4 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import React from 'react'
 import { useNavigate } from 'react-router-dom';
 import { CuboidIcon as Cube } from "lucide-react"
 

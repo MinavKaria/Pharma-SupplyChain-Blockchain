@@ -1,11 +1,11 @@
-import React from 'react'
-import { useGlobalContext } from '../provider/Context'
+
+// import { useGlobalContext } from '../provider/Context'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Link, CuboidIcon as Cube, ShieldCheck, BarChart3 } from "lucide-react"
+import { Link, ShieldCheck, BarChart3 } from "lucide-react"
 
 function Landing() {
-  const { sample, setSample } = useGlobalContext()
+
   return (
     <>
       <div className="flex flex-col min-h-screen">

@@ -23,7 +23,7 @@ import {
 
 const queryClient = new QueryClient();
 
-const projectId = "499e7cd761ba71c71185d1af33688728";
+const projectId = "222dabd62d413e59e72265d2a718e740";
 
 const localhost = {
   id: 31337,
@@ -53,7 +53,7 @@ const connectors = connectorsForWallets(
   ],
   {
     appName: 'new project',
-    projectId: '499e7cd761ba71c71185d1af33688728',
+    projectId: '222dabd62d413e59e72265d2a718e740',
   }
 );
 

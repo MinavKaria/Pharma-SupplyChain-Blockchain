@@ -29,6 +29,14 @@ const router=createBrowserRouter([
                         <RoleApplicationForm/>
                     </>
                 )
+            },
+            {
+                path:'/navigation',
+                element:(
+                    <>
+                        <h1>Navigation</h1>
+                    </>
+                )
             }
         ]
     },

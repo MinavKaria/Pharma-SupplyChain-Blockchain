@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,9 +21,15 @@ export default function RoleApplicationForm() {
 
   const account = useAccount()
 
+  
+
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [ipfsHash, setIpfsHash] = useState("")
+
+  useEffect(() => {
+    console.log("IPFS Hash:", ipfsHash)
+  }, [ipfsHash])
 
   const { toast } = useToast()
 

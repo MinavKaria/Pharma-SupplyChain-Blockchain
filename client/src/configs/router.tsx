@@ -3,6 +3,12 @@ import Layout from "../pages/Layout";
 import Landing from "../pages/Landing";
 // import Profile from "@/pages/Profile";
 import RoleApplicationForm from "@/pages/ApplyForRole";
+import Navigation from "@/pages/Navigation";
+import AssignRole from "@/pages/AssignRole";
+import TransferBatches from "@/pages/TransferBatches";
+import CheckTransactions from "@/pages/CheckTransactions";
+import CheckBatchDetails from "@/pages/CheckBatchDetails";
+import CheckAllBatches from "@/pages/CheckAllBatches";
 
 
 const router=createBrowserRouter([
@@ -34,7 +40,47 @@ const router=createBrowserRouter([
                 path:'/navigation',
                 element:(
                     <>
-                        <h1>Navigation</h1>
+                        <Navigation/>
+                    </>
+                )
+            },
+            {
+                path:'/assign',
+                element:(
+                    <>
+                        <AssignRole/>
+                    </>
+                )
+            },
+            {
+                path:'/transfer',
+                element:(
+                    <>
+                        <TransferBatches/>
+                    </>
+                )
+            },
+            {
+                path:'/check-transaction',
+                element:(
+                    <>
+                        <CheckTransactions/>
+                    </>
+                )   
+            },
+            {
+                path:'/check-batches',
+                element:(
+                    <>
+                        <CheckBatchDetails/>
+                    </>
+                )
+            },
+            {
+                path:'/check-all-batches',
+                element:(
+                    <>
+                        <CheckAllBatches/>
                     </>
                 )
             }

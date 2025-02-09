@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import "@rainbow-me/rainbowkit/styles.css";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
+import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
 import {
   mainnet,
   polygon,
@@ -57,6 +58,11 @@ const connectors = connectorsForWallets(
   }
 );
 
+const client = new ApolloClient({
+  uri: 'https://localhost:3000/graphql',
+  cache: new InMemoryCache(),
+});
+
 // @ts-ignore
 const config = getDefaultConfig({
   appName: 'My RainbowKit App',
@@ -83,7 +89,9 @@ createRoot(document.getElementById('root')!).render(
   <WagmiProvider config={config}>
     <QueryClientProvider client={queryClient}>
       <RainbowKitProvider >
+      <ApolloProvider client={client}>
         <App />
+      </ApolloProvider>
       </RainbowKitProvider>
     </QueryClientProvider>
   </WagmiProvider>

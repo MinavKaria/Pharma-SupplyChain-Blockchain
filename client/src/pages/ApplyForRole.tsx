@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { CuboidIcon as Cube } from "lucide-react"
 import { Upload, FileText } from "lucide-react"
 import { useAccount } from 'wagmi'
 
@@ -84,10 +83,7 @@ export default function RoleApplicationForm() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="px-4 lg:px-6 h-16 flex items-center">
-        <Cube className="h-6 w-6 mr-2" />
-        <span className="font-bold">BlockChainSCM</span>
-      </header>
+  
       <main className="flex-1 py-12">
         <div className="container max-w-2xl mx-auto px-4">
           <h1 className="text-3xl font-bold mb-6 text-center">Apply for a Supply Chain Role</h1>
@@ -184,11 +180,6 @@ export default function RoleApplicationForm() {
           </form>
         </div>
       </main>
-      <footer className="py-6 w-full shrink-0 px-4 md:px-6 border-t">
-        <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-          © 2024 BlockChainSCM. All rights reserved.
-        </p>
-      </footer>
     </div>
   )
 }

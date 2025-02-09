@@ -1,40 +1,38 @@
-import { Button } from "@/components/ui/button"
-import { useAccount } from "wagmi"
-import { useReadContracts } from 'wagmi'
-import abi from "@/configs/abi"
+import { Button } from "@/components/ui/button";
+import { useAccount } from "wagmi";
+import { useReadContracts } from "wagmi";
+import { useNavigate } from "react-router-dom";
+import abi from "@/configs/abi";
+
 
 function Navigation() {
-  const account = useAccount()
+  const account = useAccount();
+  const navigate = useNavigate();
 
-  const myContract={
+  const myContract = {
     abi,
-    address: '0xafaC7C3A1641bba718B8A092B8E527D855D46708' as `0x${string}`
-  }
-
+    address: "0xafaC7C3A1641bba718B8A092B8E527D855D46708" as `0x${string}`,
+  };
 
   const result = useReadContracts({
     contracts: [
       {
         ...myContract,
-        functionName: 'owner',
+        functionName: "owner",
       },
       {
         ...myContract,
-        functionName:'userRoles',
-        args:[account.address]
-      }
+        functionName: "userRoles",
+        args: [account.address],
+      },
     ],
-  })
-  console.log(result)
+  });
+  console.log(result);
 
-  const owner: any = result.data?.[0] ?? {};
-  const userRoles: any = result.data?.[1] ?? {};
+  const owner: any = result.data?.[0] || {};
+  const userRoles: any = result.data?.[1] || {};
 
-  
-
-
-
-  if(account.address===undefined){
+  if (account.address === undefined) {
     return (
       <div className="flex flex-col min-h-screen">
         <main className="flex-1 py-12">
@@ -47,29 +45,66 @@ function Navigation() {
           </div>
         </main>
       </div>
-    )
+    );
   }
 
-
-
-
-
   return (
-  <>
-    <div className="flex flex-row justify-center gap-5 m-10">
-      <div className="flex flex-col justify-center gap-5">
-      {account.address===owner.result && <Button>Assign Role</Button>}
-      {userRoles===1 &&<Button>Create Batch</Button>}
-      <Button>Apply for Role</Button>
-      {account.address===owner.result && <Button>Check All Batches</Button>}
-      <Button>Transfer Batch</Button>
-      <Button>Check Transactions</Button>
-      <Button>Check Batch Details (QR) </Button>
+    <>
+      <div className="flex flex-row justify-center gap-5 m-10">
+        <div className="flex flex-col justify-center gap-5">
+          {owner && account.address === owner.result && (
+            <Button
+              onClick={() => {
+                navigate("/assign");
+              }}
+            >
+              Assign Role
+            </Button>
+          )}
+          {userRoles && userRoles.result === 1 && (
+            <Button
+              onClick={() => {
+                navigate("/create-batch");
+              }}
+            >
+              Create Batch
+            </Button>
+          )}
+          <Button onClick={() => [navigate("/apply")]}>Apply for Role</Button>
+          {account.address === owner.result && (
+            <Button
+              onClick={() => {
+                navigate("/check-all-batches");
+              }}
+            >
+              Check All Batches
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              navigate("/transfer");
+            }}
+          >
+            Transfer Batch
+          </Button>
+          <Button
+            onClick={() => {
+              navigate("/check-transaction");
+            }}
+          >
+            Check Transactions
+          </Button>
+          <Button
+            onClick={() => {
+              navigate("/check-batches");
+            }}
+          >
+            Check Batch Details (QR){" "}
+          </Button>
+        </div>
       </div>
-    </div>
     </>
-  
-  )
+  );
 }
 
-export default Navigation
+export default Navigation;

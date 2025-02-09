@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema({
     },
     walletAddress: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     email: {
         type: String,
@@ -29,6 +30,10 @@ const userSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    assigned: {
+        type: Boolean,
+        default: false
     }
 });
 

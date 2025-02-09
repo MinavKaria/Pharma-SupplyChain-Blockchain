@@ -78,7 +78,7 @@ const config = getDefaultConfig({
     [optimism.id]: http(),
     [arbitrum.id]: http(),
     [base.id]: http(),
-    [sepolia.id]: http()
+    [sepolia.id]: http(import.meta.env.VITE_RPC_URL),
   },
   // @ts-ignore
   connectors
@@ -86,14 +86,14 @@ const config = getDefaultConfig({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-  <WagmiProvider config={config}>
-    <QueryClientProvider client={queryClient}>
-      <RainbowKitProvider >
-      <ApolloProvider client={client}>
-        <App />
-      </ApolloProvider>
-      </RainbowKitProvider>
-    </QueryClientProvider>
-  </WagmiProvider>
+    <ApolloProvider client={client}>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider >
+            <App />
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  </ApolloProvider>
 </StrictMode>,
 )

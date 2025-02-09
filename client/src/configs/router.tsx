@@ -9,6 +9,7 @@ import TransferBatches from "@/pages/TransferBatches";
 import CheckTransactions from "@/pages/CheckTransactions";
 import CheckBatchDetails from "@/pages/CheckBatchDetails";
 import CheckAllBatches from "@/pages/CheckAllBatches";
+import CreateBatch from "@/pages/CreateBatch";
 
 
 const router=createBrowserRouter([
@@ -49,6 +50,14 @@ const router=createBrowserRouter([
                 element:(
                     <>
                         <AssignRole/>
+                    </>
+                )
+            },
+            {
+                path:'create-batch',
+                element:(
+                    <>
+                        <CreateBatch/>
                     </>
                 )
             },

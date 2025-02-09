@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Upload, FileText } from "lucide-react"
 import { useAccount } from 'wagmi'
-
+import {pinata} from '@/configs/pinta';
 
 export default function RoleApplicationForm() {
  
@@ -23,6 +22,8 @@ export default function RoleApplicationForm() {
   const account = useAccount()
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [loading, setLoading] = useState(false)
+  const [ipfsHash, setIpfsHash] = useState("")
 
   const { toast } = useToast()
 
@@ -40,6 +41,21 @@ export default function RoleApplicationForm() {
       role: value,
     }))
   }
+
+  const handleSubmission = async () => {
+    try {
+      setLoading(true)
+      const upload = await pinata.upload.fileArray(uploadedFiles)
+      console.log(upload);
+      setIpfsHash(upload.IpfsHash)
+    } catch (error) {
+      console.log(error);
+    }
+    finally {
+      setLoading(false)
+     
+    }
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -139,16 +155,6 @@ export default function RoleApplicationForm() {
                 </div>
               </RadioGroup>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="experience">Relevant Experience</Label>
-              <Textarea
-                id="experience"
-                name="experience"
-                value={formData.experience}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
             <div>
                 <Label htmlFor="file-upload">Upload Required Documents</Label>
                 <div className="mt-2">
@@ -162,7 +168,13 @@ export default function RoleApplicationForm() {
                 </div>
                 {uploadedFiles.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-sm text-gray-500">Uploaded files:</p>
+                    <div className="flex flex-row gap-2">
+                      <p className="text-sm text-gray-500">Uploaded files:</p>
+                      {!loading && <button className="text-sm text-blue-600" onClick={handleSubmission}>Upload to IPFS</button>}
+                      {loading && (
+                        <h1 className="text-sm text-gray-500">Loading...</h1>
+                      )}
+                    </div>
                     <ul className="list-disc list-inside">
                       {uploadedFiles.map((file, index) => (
                         <li key={index} className="text-sm text-gray-500 flex items-center">

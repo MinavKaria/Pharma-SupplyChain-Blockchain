@@ -6,6 +6,7 @@ import resolvers from './configs/resolvers.js';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
 
 async function startServer()
@@ -18,13 +19,15 @@ async function startServer()
 
     await server.start();
     
+    dotenv.config();
     app.use(cors());
     app.use(bodyParser.json());
 
     try{
         console.log('Connecting to MongoDB');
 
-        mongoose.connect('mongodb+srv://mkkaria04:minav@cluster0.gbnnstq.mongodb.net/blockchain')
+        
+        mongoose.connect(process.env.MONGO_URI)
     
         console.log('Connected to MongoDB');
     }

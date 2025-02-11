@@ -133,6 +133,20 @@ export default function RoleApplicationForm() {
       title: "Application Submitted",
       description: "Your application has been submitted successfully and you will be sent a confirmation email soon.",
     })
+    setFormData({
+      name: "",
+      walletAddress: "",
+      email: "",
+      companyName: "",
+      role: "",
+      ipfsHash: ""
+    })
+    console.log(data)
+
+    if(error){
+      console.log(error)
+    }
+
     
    
   }

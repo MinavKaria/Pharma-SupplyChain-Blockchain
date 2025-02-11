@@ -59,7 +59,7 @@ const connectors = connectorsForWallets(
 );
 
 const client = new ApolloClient({
-  uri: 'https://localhost:3000/graphql',
+  uri: 'http://localhost:3000/graphql',
   cache: new InMemoryCache(),
 });
 
@@ -86,14 +86,16 @@ const config = getDefaultConfig({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ApolloProvider client={client}>
+ 
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider >
+            <ApolloProvider client={client}>
             <App />
+            </ApolloProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
-  </ApolloProvider>
+ 
 </StrictMode>,
 )

@@ -8,24 +8,61 @@ import { useToast } from "@/hooks/use-toast"
 import { Upload, FileText } from "lucide-react"
 import { useAccount } from 'wagmi'
 import {pinata} from '@/configs/pinta';
+import { gql, useMutation } from "@apollo/client";
+
+const CREATE_USER = gql`
+  mutation Mutation(
+    $name: String!, 
+    $walletAddress: String!, 
+    $email: String!, 
+    $companyName: String!, 
+    $role: String!, 
+    $ipfsHash: String!
+  ) {
+    user(
+      name: $name, 
+      walletAddress: $walletAddress, 
+      email: $email, 
+      companyName: $companyName, 
+      role: $role, 
+      ipfsHash: $ipfsHash
+    ) {
+      id
+    }
+  }
+`;
 
 export default function RoleApplicationForm() {
  
   const [formData, setFormData] = useState({
-    fullName: "",
+    name: "",
+    walletAddress: "",
     email: "",
     companyName: "",
     role: "",
-    experience: "",
+    ipfsHash: ""
   })
 
+  
+
   const account = useAccount()
+
+  useEffect(() => {
+    if(account && account.address){
+      setFormData((prevState) => ({
+        ...prevState,
+        walletAddress: account.address || "",
+      }))
+    }
+  }, [account])
+
 
   
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading2, setLoading] = useState(false)
   const [ipfsHash, setIpfsHash] = useState("")
+  const [uploaded, setUploaded] = useState(false)
 
   useEffect(() => {
     console.log("IPFS Hash:", ipfsHash)
@@ -54,6 +91,11 @@ export default function RoleApplicationForm() {
       const upload = await pinata.upload.fileArray(uploadedFiles)
       console.log(upload);
       setIpfsHash(upload.IpfsHash)
+      setFormData((prevState) => ({
+        ...prevState,
+        ipfsHash: upload.IpfsHash,
+      }))
+      setUploaded(true)
     } catch (error) {
       console.log(error);
     }
@@ -69,22 +111,33 @@ export default function RoleApplicationForm() {
     }
   }
 
+  const [addTodo, { data, loading, error }] = useMutation(CREATE_USER);
 
-  const handleSubmit = (e: React.FormEvent) => {
+ 
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log("Form submitted:", formData)
+    addTodo({
+      variables: {
+        name: formData.name,
+        walletAddress: formData.walletAddress,
+        email: formData.email,
+        companyName: formData.companyName,
+        role: formData.role,
+        ipfsHash: formData.ipfsHash,
+      },
+    });
     toast({
       title: "Application Submitted",
-      description: "We've received your application and will be in touch soon.",
+      description: "Your application has been submitted successfully and you will be sent a confirmation email soon.",
     })
-    setFormData({
-      fullName: "",
-      email: "",
-      companyName: "",
-      role: "",
-      experience: "",
-    })
+    
+   
   }
+
+  
 
   if(account.address===undefined){
     return (
@@ -112,11 +165,11 @@ export default function RoleApplicationForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
          
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} required />
+              <Label htmlFor="name">Full Name</Label>
+              <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fullName">Wallet Address</Label>
+              <Label htmlFor="name">Wallet Address</Label>
               <Input id="walletAddress" name="walletAddress" value={(account && account.address)} disabled />
             </div>
             <div className="space-y-2">
@@ -176,9 +229,13 @@ export default function RoleApplicationForm() {
                   <div className="mt-2">
                     <div className="flex flex-row gap-2">
                       <p className="text-sm text-gray-500">Uploaded files:</p>
-                      {!loading && <button className="text-sm text-blue-600" onClick={handleSubmission}>Upload to IPFS</button>}
-                      {loading && (
+                      {(!loading2 && !uploaded) && <button className="text-sm text-blue-600" onClick={handleSubmission}>Upload to IPFS</button>}
+                      {loading2 && (
                         <h1 className="text-sm text-gray-500">Loading...</h1>
+                      )}
+                      {uploaded && (
+                        <a className="text-sm text-green-500" href={`https://ipfs.io/ipfs/${ipfsHash}`} target="_blank" 
+                        rel="noopener noreferrer">Uploaded to IPFS </a>
                       )}
                     </div>
                     <ul className="list-disc list-inside">
@@ -192,9 +249,13 @@ export default function RoleApplicationForm() {
                   </div>
                 )}
               </div>
-            <Button type="submit" className="w-full">
-              Submit Application
+           
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Submitting..." : "Submit Application"}
             </Button>
+
+            
+               
           </form>
         </div>
       </main>

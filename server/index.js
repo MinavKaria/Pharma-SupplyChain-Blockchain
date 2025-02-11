@@ -24,7 +24,7 @@ async function startServer()
     try{
         console.log('Connecting to MongoDB');
 
-        mongoose.connect('mongodb://localhost:27017/blockchain')
+        mongoose.connect('mongodb+srv://mkkaria04:minav@cluster0.gbnnstq.mongodb.net/blockchain')
     
         console.log('Connected to MongoDB');
     }

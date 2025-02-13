@@ -59,7 +59,7 @@ const connectors = connectorsForWallets(
 );
 
 const client = new ApolloClient({
-  uri: 'http://localhost:3000/graphql',
+  uri: 'https://pharma-server-zeta.vercel.app/graphql',
   cache: new InMemoryCache(),
 });
 

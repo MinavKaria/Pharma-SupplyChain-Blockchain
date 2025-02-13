@@ -10,13 +10,16 @@ const resolvers = {
                 throw new Error('Failed to fetch users');
             }
         },
-        user: async (_, { id }) => {
+        user: async (_, { walletAddress }) => {
+            console.log("Fetching user with wallet address:", walletAddress);
             try {
-                const user = await User.findById(id);
+                const user = await User.findOne({ walletAddress });
+                console.log(user)
                 if (!user) {
-                    throw new Error('User not found');
+                    return false;
                 }
-                return user;
+                return true;
+                
             } catch (error) {
                 throw new Error('Failed to fetch user');
             }

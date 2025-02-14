@@ -22,7 +22,7 @@ type Query {
 
 type Mutation {
     user(name: String!, walletAddress: String!, email: String!, companyName: String!, role: String!, ipfsHash: String!): User
-    assignUser(id: ID!): User
+    assignUser(walletAddress: String!): User
 }
 `;
 

@@ -63,9 +63,9 @@ const resolvers = {
                 throw new Error(error.message);
             }
         },
-        assignUser: async (_, { id }) => {
+        assignUser: async (_, { walletAddress }) => {
             try {
-                const user = await User.findById(id);
+                const user = await User.findOne({walletAddress});
                 if (!user) {
                     throw new Error('User not found');
                 }

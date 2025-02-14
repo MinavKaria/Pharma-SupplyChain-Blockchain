@@ -49,23 +49,27 @@ export default function RoleApplicationForm() {
     ipfsHash: "",
   });
 
-  const [isRegistered, setIsRegistered] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(true);
   const account = useAccount();
   const {
     loading: queryLoading,
     error: queryError,
     data: queryData,
-    refetch
+    refetch,
   } = useQuery(GET_IS_REGISTERED, {
     variables: { walletAddress: account?.address || "" },
     skip: !account?.address,
   });
 
-
+  useEffect(() => {
+    if (account?.address) {
+      refetch();
+    }
+  }, [account?.address, refetch]);
 
   useEffect(() => {
     if (account?.address) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         walletAddress: account.address || "",
       }));
@@ -73,21 +77,18 @@ export default function RoleApplicationForm() {
   }, [account?.address]);
 
   useEffect(() => {
-    console.log(account.address)
+    console.log(account.address);
     console.log(queryData);
-    if(queryError)
-    {
+    if (queryError) {
       console.log(queryError);
     }
 
-    if (!queryLoading && queryData?.user) {
-      setIsRegistered(true);
-    }
-    else
-    {
-      setIsRegistered(false);
-    }
-  }, [queryLoading, queryData]);
+    if (!queryLoading && queryData!==undefined) {
+      setIsRegistered(queryData.user);
+      console.log(queryData.user);
+    } 
+    
+  }, [queryLoading, queryData,account?.address]);
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [loading2, setLoading] = useState(false);

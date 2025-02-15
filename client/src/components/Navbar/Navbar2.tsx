@@ -12,7 +12,7 @@ function Navbar2() {
                 <div className="flex justify-center items-center text-xl font-bold text-gray-800 cursor-pointer" onClick={()=>{
                     navigate("/");
                 }}><Cube className="h-6 w-6 mr-2" />
-                  <span className="font-bold">BlockChainSCM</span></div>
+                  <span className="font-bold">SuppliChain</span></div>
                 </div>
                 <div>
                 <ConnectButton/>

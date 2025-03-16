@@ -31,6 +31,18 @@ const abi = [
         name: "quantity",
         type: "uint256",
       },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "expiryDate",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "enum AdvancedSupplyChain.StorageCondition",
+        name: "storageCondition",
+        type: "uint8",
+      },
     ],
     name: "BatchCreated",
     type: "event",
@@ -122,6 +134,12 @@ const abi = [
       { internalType: "address", name: "creator", type: "address" },
       { internalType: "uint256", name: "quantity", type: "uint256" },
       { internalType: "uint256", name: "quantityTransferred", type: "uint256" },
+      { internalType: "uint256", name: "expiryDate", type: "uint256" },
+      {
+        internalType: "enum AdvancedSupplyChain.StorageCondition",
+        name: "storageCondition",
+        type: "uint8",
+      },
     ],
     stateMutability: "view",
     type: "function",
@@ -130,6 +148,12 @@ const abi = [
     inputs: [
       { internalType: "string", name: "_productData", type: "string" },
       { internalType: "uint256", name: "_quantity", type: "uint256" },
+      { internalType: "uint256", name: "_expiryDate", type: "uint256" },
+      {
+        internalType: "enum AdvancedSupplyChain.StorageCondition",
+        name: "_storageCondition",
+        type: "uint8",
+      },
     ],
     name: "createBatch",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
@@ -166,6 +190,12 @@ const abi = [
         internalType: "struct AdvancedSupplyChain.Transfer[]",
         name: "transfers",
         type: "tuple[]",
+      },
+      { internalType: "uint256", name: "expiryDate", type: "uint256" },
+      {
+        internalType: "enum AdvancedSupplyChain.StorageCondition",
+        name: "storageCondition",
+        type: "uint8",
       },
     ],
     stateMutability: "view",
@@ -227,7 +257,7 @@ const abi = [
   {
     inputs: [
       { internalType: "uint256", name: "_batchId", type: "uint256" },
-      { internalType: "address", name: "_recipient", type: "address" },
+      { internalType: "address", name: "_to", type: "address" },
       { internalType: "uint256", name: "_quantity", type: "uint256" },
     ],
     name: "transferBatch",
@@ -256,5 +286,4 @@ const abi = [
     type: "function",
   },
 ];
-
 export default abi;

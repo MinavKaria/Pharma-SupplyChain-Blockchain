@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, gql, useMutation } from "@apollo/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,14 +164,65 @@ const UserTable = ({
   users: User[];
   assignedOnly?: boolean;
 }) => {
+  const [assigningUser, setAssigningUser] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const {
     writeContract,
-    isError,
-    isPending,
-    isSuccess,
+    isError: isContractError,
+    isPending: isContractPending,
+    isSuccess: isContractSuccess,
     failureReason,
+    reset: resetContract,
   } = useWriteContract();
-  const [assignRole, { data, loading, error }] = useMutation(SET_ASSIGN_ROLE);
+
+  const [assignRole, { loading: assignLoading, error: assignError }] = 
+    useMutation(SET_ASSIGN_ROLE, {
+      refetchQueries: ["GetUsers", "GetAssignedUsers"],
+    });
+
+  // Handle the role assignment process
+  const handleAssignRole = async (user: User) => {
+    setAssigningUser(user.walletAddress);
+    
+    let role = 0;
+    if (user.role === "manufacturer") {
+      role = 1;
+    } else if (user.role === "distributor") {
+      role = 2;
+    } else if (user.role === "retailer") {
+      role = 3;
+    }
+
+    writeContract({
+      abi,
+      address: "0xB0d33bda0A19392F925fabF1A63c3D2eC3129D81",
+      functionName: "assignRole",
+      args: [user.walletAddress, role],
+    });
+  };
+
+  // When contract write is successful, update the database
+  // This effect runs when isContractSuccess changes
+  useEffect(() => {
+    if (isContractSuccess && assigningUser) {
+      // Only now call the GraphQL mutation after successful blockchain transaction
+      assignRole({
+        variables: {
+          walletAddress: assigningUser
+        }
+      });
+      
+      // Reset state
+      setAssigningUser("");
+      
+      // Close dialog after successful assignment
+      setIsDialogOpen(false);
+      
+      // Reset contract state
+      resetContract();
+    }
+  }, [isContractSuccess, assigningUser, assignRole, resetContract]);
 
   return (
     <div className="overflow-x-auto">
@@ -225,13 +276,14 @@ const UserTable = ({
                 <a
                   href={`https://ipfs.io/ipfs/${user.ipfsHash}`}
                   target="_blank"
+                  rel="noreferrer"
                 >
                   Click to Open
                 </a>
               </TableCell>
               {!assignedOnly && (
                 <TableCell>
-                  <Dialog>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger>
                       <div
                         className={`${
@@ -254,55 +306,31 @@ const UserTable = ({
                           </div>
                         </DialogDescription>
                         <Button
-                          disabled={user.assigned}
-                          onClick={async () => {
-                            var role = 0;
-                            if (user.role === "supplier") {
-                              role = 1;
-                            } else if (user.role === "manufacturer") {
-                              role = 2;
-                            } else if (user.role === "distributor") {
-                              role = 3;
-                            } else if (user.role === "retailer") {
-                              role = 4;
-                            }
-
-                            writeContract({
-                              abi,
-                              address:
-                                "0xafaC7C3A1641bba718B8A092B8E527D855D46708",
-                              functionName: "assignRole",
-                              args: [user.walletAddress, role],
-                            });
-
-                            console.log(data);
-
-                            if (error) {
-                              console.log(error);
-                            }
-
-                            if (isSuccess) {
-                              assignRole({
-                                variables: {
-                                  walletAddress: user.walletAddress,
-                                },
-                              });
-                              if (isError) {
-                                console.log(failureReason);
-                              }
-                            }
-                          }}
+                          disabled={user.assigned || isContractPending || assignLoading}
+                          onClick={() => handleAssignRole(user)}
                         >
-                            {user.assigned
+                          {user.assigned
                             ? "Role Assigned"
-                            : isPending
-                            ? "Processing..."
-                            : loading
-                            ? "Loading..."
-                            : isError
-                            ? "Error"
+                            : isContractPending
+                            ? "Processing Blockchain..."
+                            : assignLoading
+                            ? "Updating Database..."
+                            : isContractError
+                            ? "Blockchain Error"
+                            : assignError
+                            ? "Database Error"
                             : "Assign Role"}
                         </Button>
+                        {isContractError && (
+                          <p className="text-red-500 text-sm mt-2">
+                            Error: {failureReason?.message || "Transaction failed"}
+                          </p>
+                        )}
+                        {assignError && (
+                          <p className="text-red-500 text-sm mt-2">
+                            Error updating database
+                          </p>
+                        )}
                       </DialogHeader>
                     </DialogContent>
                   </Dialog>

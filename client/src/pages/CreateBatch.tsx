@@ -1,7 +1,6 @@
-"use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +11,16 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useWriteContract } from "wagmi";
+import abi from "@/configs/abi";
 
 interface FormData {
   ProductName: string;
@@ -26,6 +34,13 @@ interface FormData {
   Certification: string;
   CountryOfOrigin: string;
   DeliveryDate: string;
+}
+
+// Enum to match the contract's StorageCondition enum
+enum StorageCondition {
+  Ambient = 0,
+  Refrigerated = 1,
+  Frozen = 2
 }
 
 export default function BatchCreation() {
@@ -43,7 +58,9 @@ export default function BatchCreation() {
     DeliveryDate: "",
   });
   const [quantity, setQuantity] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [storageCondition, setStorageCondition] = useState<StorageCondition>(StorageCondition.Ambient);
+  
+  const { writeContract, isPending, isSuccess, isError, error } = useWriteContract();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -54,37 +71,60 @@ export default function BatchCreation() {
     setQuantity(e.target.value);
   };
 
+  const handleStorageConditionChange = (value: string) => {
+    setStorageCondition(Number(value) as StorageCondition);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
     try {
+      // Convert ExpiryDate to unix timestamp (seconds since epoch)
+      const expiryDateObject = new Date(formData.ExpiryDate);
+      const expiryDateTimestamp =Math.floor(expiryDateObject.getTime() / 1000);;
+
+      
+      // Prepare product data as JSON string
       const productData = JSON.stringify(formData);
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      console.log("Product Data JSON:", formData);
-      console.log("Stringified Product Data:", productData);
+      
+      // Call the smart contract
+      writeContract({
+        abi,
+        address: "0xB0d33bda0A19392F925fabF1A63c3D2eC3129D81", 
+        functionName: "createBatch",
+        args: [
+          JSON.stringify(productData), 
+          Number(quantity),
+          expiryDateTimestamp,
+          storageCondition
+        ],
+      });
+      
+      console.log("Transaction submitted");
+      console.log("Product Data:", productData);
       console.log("Quantity:", quantity);
+      console.log("Expiry Date (timestamp):", expiryDateTimestamp);
+      console.log("Storage Condition:", storageCondition);
+      
+    } catch (err) {
+      console.error("Error submitting transaction:", err);
+      toast({
+        title: "Error",
+        description: "Failed to create batch: " + (err instanceof Error ? err.message : String(err)),
+        variant: "destructive",
+      });
+    }
+  };
 
-      // Code to send productData and quantity to the backend or smart contract
-      // Example:
-      // await fetch('/api/create-batch', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ formData, quantity }),
-      // });
-
-      // Or if interacting with a smart contract:
-      // await contract.methods.createBatch(formData, quantity).send({ from: userAddress });
-
+  // Handle transaction states
+  useEffect(() => {
+    if (isSuccess) {
       toast({
         title: "Batch Created",
-        description: "Your batch has been successfully created.",
+        description: "Your batch has been successfully created and recorded on the blockchain.",
       });
-
+      
+      // Reset form
       setFormData({
         ProductName: "",
         BatchNumber: "",
@@ -99,23 +139,24 @@ export default function BatchCreation() {
         DeliveryDate: "",
       });
       setQuantity("");
-    } catch (error) {
+      setStorageCondition(StorageCondition.Ambient);
+    }
+    
+    if (isError && error) {
       toast({
-        title: "Error",
-        description: "Failed to create batch.",
+        title: "Transaction Failed",
+        description: error.message || "There was an error creating the batch on the blockchain.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [isSuccess, isError, error]);
 
   return (
     <div className="max-w-4xl mx-auto p-4 mb-5">
       <CardHeader className="text-center mb-4">
         <CardTitle className="text-3xl font-bold">Create Batch</CardTitle>
         <CardDescription className="text-muted-foreground mt-2">
-          Enter product details to create a new batch
+          Enter product details to create a new batch on the blockchain
         </CardDescription>
       </CardHeader>
       <Card className="shadow-lg rounded-lg overflow-hidden pt-4">
@@ -152,11 +193,27 @@ export default function BatchCreation() {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="StorageCondition">Storage Condition</Label>
+              <Select 
+                value={storageCondition.toString()} 
+                onValueChange={handleStorageConditionChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select storage condition" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Ambient</SelectItem>
+                  <SelectItem value="1">Refrigerated</SelectItem>
+                  <SelectItem value="2">Frozen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="col-span-3">
               <div className="h-px w-11/12 bg-gray-300 mt-4 mb-5 mx-auto" />
               <div className="flex justify-center">
-                <Button type="submit" className="w-52" disabled={isLoading}>
-                  {isLoading ? "Creating Batch..." : "Create Batch"}
+                <Button type="submit" className="w-52" disabled={isPending}>
+                  {isPending ? "Creating Batch..." : "Create Batch"}
                 </Button>
               </div>
             </div>

@@ -11,7 +11,7 @@ function Navigation() {
 
   const myContract = {
     abi,
-    address: "0xafaC7C3A1641bba718B8A092B8E527D855D46708" as `0x${string}`,
+    address: "0xB0d33bda0A19392F925fabF1A63c3D2eC3129D81" as `0x${string}`,
   };
 
   const result = useReadContracts({

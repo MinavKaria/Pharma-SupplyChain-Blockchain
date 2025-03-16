@@ -298,10 +298,7 @@ export default function RoleApplicationForm() {
                 onValueChange={handleRoleChange}
                 required
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="supplier" id="supplier" />
-                  <Label htmlFor="supplier">Supplier</Label>
-                </div>
+
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="manufacturer" id="manufacturer" />
                   <Label htmlFor="manufacturer">Manufacturer</Label>

@@ -90,7 +90,7 @@ export default function BatchCreation() {
       // Call the smart contract
       writeContract({
         abi,
-        address: "0xB0d33bda0A19392F925fabF1A63c3D2eC3129D81", 
+        address: import.meta.env.VITE_CONTRACT_ADDRESS, 
         functionName: "createBatch",
         args: [
           JSON.stringify(productData), 

@@ -256,9 +256,9 @@ const abi = [
   },
   {
     inputs: [
-      { internalType: "uint256", name: "_batchId", type: "uint256" },
-      { internalType: "address", name: "_to", type: "address" },
-      { internalType: "uint256", name: "_quantity", type: "uint256" },
+      { internalType: "uint256[]", name: "_batchIds", type: "uint256[]" },
+      { internalType: "address", name: "_recipient", type: "address" },
+      { internalType: "uint256[]", name: "_quantities", type: "uint256[]" },
     ],
     name: "transferBatch",
     outputs: [],

@@ -196,7 +196,7 @@ const UserTable = ({
 
     writeContract({
       abi,
-      address: "0xB0d33bda0A19392F925fabF1A63c3D2eC3129D81",
+      address: import.meta.env.VITE_CONTRACT_ADDRESS,
       functionName: "assignRole",
       args: [user.walletAddress, role],
     });

@@ -1,17 +1,205 @@
-import React, { useState } from 'react';
-import { useAccount, useContractRead, useContractWrite } from 'wagmi';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useRef } from 'react';
+import { useAccount, useContractRead } from 'wagmi';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import * as d3 from 'd3';
 import abi from '@/configs/abi';
 
-// Import contract ABI and address
-const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS // Replace with your deployed contract address
+// Import contract address from environment variables
+const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
+const contractABI = abi;
 
-const contractABI =abi
+// Role mapping for visualization
+const roleMapping = {
+  0: "Manufacturer",
+  1: "Distributor", 
+  2: "Retailer",
+  3: "Customer"
+};
+
+// D3 Supply Chain Flow Graph Component
+const SupplyChainGraph = ({ chainOfCustody, transfers }) => {
+  const svgRef = useRef(null);
+  
+  useEffect(() => {
+    if (!chainOfCustody || chainOfCustody.length === 0) return;
+    
+    // Clear previous visualization
+    d3.select(svgRef.current).selectAll("*").remove();
+    
+    const width = 800;
+    const height = 300;
+    const nodeRadius = 40;
+    const nodePadding = 120;
+    
+    // Create SVG
+    const svg = d3.select(svgRef.current)
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("width", "100%")
+      .attr("height", "100%")
+      .attr("style", "max-height: 300px;");
+    
+    // Define transfer quantities for edge labels
+    const transferMap = {};
+    transfers.forEach(transfer => {
+      const key = `${transfer.from}-${transfer.to}`;
+      transferMap[key] = transfer.quantity.toString();
+    });
+    
+    // Create nodes data
+    const nodes = chainOfCustody.map((address, i) => {
+      // Determine role based on position
+      let role = "";
+      if (i === 0) role = "Manufacturer";
+      else if (i === chainOfCustody.length - 1) {
+        role = i === 1 ? "Distributor" : i === 2 ? "Retailer" : "Customer";
+      } else {
+        role = i === 1 ? "Distributor" : "Retailer";
+      }
+      
+      return {
+        id: i,
+        address: address,
+        role: role,
+        x: (i * nodePadding) + 70,
+        y: height / 2
+      };
+    });
+    
+    // Create links between adjacent nodes
+    const links = [];
+    for (let i = 0; i < nodes.length - 1; i++) {
+      links.push({
+        source: i,
+        target: i + 1,
+        sourceAddress: nodes[i].address,
+        targetAddress: nodes[i + 1].address,
+        quantity: transferMap[`${nodes[i].address}-${nodes[i + 1].address}`] || "?"
+      });
+    }
+    
+    // Add connecting lines
+    svg.selectAll(".link")
+      .data(links)
+      .enter()
+      .append("line")
+      .attr("class", "link")
+      .attr("x1", d => nodes[d.source].x + nodeRadius)
+      .attr("y1", d => nodes[d.source].y)
+      .attr("x2", d => nodes[d.target].x - nodeRadius)
+      .attr("y2", d => nodes[d.target].y)
+      .attr("stroke", "#2563eb")
+      .attr("stroke-width", 2);
+    
+    // Add quantity labels
+    svg.selectAll(".quantity-label")
+      .data(links)
+      .enter()
+      .append("text")
+      .attr("class", "quantity-label")
+      .attr("x", d => (nodes[d.source].x + nodes[d.target].x) / 2)
+      .attr("y", d => (nodes[d.source].y + nodes[d.target].y) / 2 - 10)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#4b5563")
+      .attr("font-size", "12px")
+      .text(d => `Qty: ${d.quantity}`);
+    
+    // Create arrow markers for direction
+    svg.append("defs").selectAll("marker")
+      .data(["arrow"])
+      .enter().append("marker")
+      .attr("id", d => d)
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 8)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", "#2563eb");
+    
+    // Apply markers to lines
+    svg.selectAll(".link")
+      .attr("marker-end", "url(#arrow)");
+    
+    // Add nodes (circles)
+    const nodeGroups = svg.selectAll(".node")
+      .data(nodes)
+      .enter()
+      .append("g")
+      .attr("class", "node")
+      .attr("transform", d => `translate(${d.x}, ${d.y})`);
+    
+    // Circles for each node with different colors based on role
+    nodeGroups.append("circle")
+      .attr("r", nodeRadius)
+      .attr("fill", d => {
+        if (d.role === "Manufacturer") return "#4338ca"; // indigo
+        if (d.role === "Distributor") return "#0369a1"; // sky
+        if (d.role === "Retailer") return "#15803d"; // green
+        return "#b45309"; // amber (for customer)
+      })
+      .attr("stroke", "#f8fafc")
+      .attr("stroke-width", 2);
+    
+    // Role labels
+    nodeGroups.append("text")
+      .attr("text-anchor", "middle")
+      .attr("y", -5)
+      .attr("fill", "white")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text(d => d.role);
+    
+    // Truncated address labels
+    nodeGroups.append("text")
+      .attr("text-anchor", "middle")
+      .attr("y", 10)
+      .attr("fill", "white")
+      .attr("font-size", "10px")
+      .text(d => `${d.address.substring(0, 6)}...`);
+    
+    // Add a legend
+    const legend = svg.append("g")
+      .attr("transform", "translate(20, 20)");
+    
+    const legendData = [
+      { role: "Manufacturer", color: "#4338ca" },
+      { role: "Distributor", color: "#0369a1" },
+      { role: "Retailer", color: "#15803d" },
+      { role: "Customer", color: "#b45309" }
+    ];
+    
+    legendData.forEach((item, i) => {
+      const legendRow = legend.append("g")
+        .attr("transform", `translate(0, ${i * 20})`);
+      
+      legendRow.append("rect")
+        .attr("width", 15)
+        .attr("height", 15)
+        .attr("fill", item.color);
+      
+      legendRow.append("text")
+        .attr("x", 20)
+        .attr("y", 12)
+        .attr("font-size", "12px")
+        .attr("fill", "#64748b")
+        .text(item.role);
+    });
+    
+  }, [chainOfCustody, transfers]);
+  
+  return (
+    <div className="w-full overflow-x-auto pb-6">
+      <svg ref={svgRef} className="w-full"></svg>
+    </div>
+  );
+};
 
 const BatchTransferGraph = ({ batchId }) => {
   const { data, isLoading, isError } = useContractRead({
@@ -74,8 +262,18 @@ const BatchTransferGraph = ({ batchId }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Supply Chain Flow</CardTitle>
-          <CardDescription>Chain of custody and transfers</CardDescription>
+          <CardTitle>Supply Chain Flow Visualization</CardTitle>
+          <CardDescription>Visual representation of product movement</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SupplyChainGraph chainOfCustody={chainOfCustody} transfers={transfers} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Supply Chain Data</CardTitle>
+          <CardDescription>Detailed chain of custody and transfers</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -232,6 +430,19 @@ const UserTransfers = () => {
       outgoingTransfers.push(transfer);
     }
   }
+
+  // Get a count of batches per partner address for visualization
+  const partnerCounts = {};
+  [...incomingTransfers, ...outgoingTransfers].forEach(transfer => {
+    const partner = transfer.from === address ? transfer.to : transfer.from;
+    partnerCounts[partner] = (partnerCounts[partner] || 0) + 1;
+  });
+
+  // Extract data for the summary chart
+  const chartData = Object.entries(partnerCounts).map(([address, count]) => ({
+    address: `${address.substring(0, 8)}...`,
+    count
+  }));
 
   return (
     <div className="space-y-6">

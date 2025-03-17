@@ -10,6 +10,7 @@ import CheckTransactions from "@/pages/CheckTransactions";
 import CheckBatchDetails from "@/pages/CheckBatchDetails";
 import CheckAllBatches from "@/pages/CheckAllBatches";
 import CreateBatch from "@/pages/CreateBatch";
+import Test from "@/pages/Test";
 
 
 const router=createBrowserRouter([
@@ -90,6 +91,14 @@ const router=createBrowserRouter([
                 element:(
                     <>
                         <CheckAllBatches/>
+                    </>
+                )
+            },
+            {
+                path:"/test",
+                element:(
+                    <>
+                        <Test/>
                     </>
                 )
             }

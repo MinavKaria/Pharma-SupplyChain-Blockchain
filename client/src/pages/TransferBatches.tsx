@@ -17,6 +17,7 @@ import { Plus, X, Check, Info, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import abi from "@/configs/abi";
 import {
   Table,
   TableBody,
@@ -41,6 +42,7 @@ interface UserBatch {
   id: bigint;
   productData: string;
   availableQuantity: bigint;
+  productName: string;
 }
 
 interface TransferBatchesProps {
@@ -61,79 +63,30 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
   
   const contractAddr = contractAddress || (import.meta.env.VITE_CONTRACT_ADDRESS as `0x${string}`);
 
-  const { data: allBatchesData, isLoading: isLoadingBatches, refetch: refetchBatches } = useReadContract({
+  // Get all batches data for product information
+  const { data: allBatchesData, isLoading: isLoadingAllBatches, refetch: refetchAllBatches } = useReadContract({
     address: contractAddr,
-    abi: [
-      {
-        name: "getAllBatches",
-        type: "function",
-        stateMutability: "view",
-        inputs: [],
-        outputs: [
-          { name: "", type: "uint256[]" },
-          { name: "", type: "string[]" },
-          { name: "", type: "uint256[]" },
-          { name: "", type: "address[]" },
-          { name: "", type: "uint256[]" }
-        ],
-      }
-    ],
+    abi: abi,
     functionName: "getAllBatches",
   });
 
- 
-  const fetchUserBatchQuantities = async (batchIds: bigint[]) => {
-    if (!address) return [];
-    
-    setIsFetchingBatches(true);
-    
-    try {
-      const quantities = await Promise.all(
-        batchIds.map(async (batchId) => {
-          const quantity = await readContract({
-            address: contractAddr,
-            abi: [
-              {
-                name: "batchQuantities",
-                type: "function",
-                stateMutability: "view",
-                inputs: [
-                  { name: "", type: "uint256" },
-                  { name: "", type: "address" }
-                ],
-                outputs: [{ name: "", type: "uint256" }],
-              }
-            ],
-            functionName: "batchQuantities",
-            args: [batchId, address],
-          });
-          return quantity;
-        })
-      );
-      
-      return quantities;
-    } catch (error) {
-      console.error("Error fetching batch quantities:", error);
-      return batchIds.map(() => BigInt(0));
-    } finally {
-      setIsFetchingBatches(false);
-    }
-  };
+  // Get the user's batches using getBatchesByAddress
+  const { data: userBatchesData, isLoading: isLoadingUserBatches, refetch: refetchUserBatches } = useReadContract({
+    address: contractAddr,
+    abi: abi,
+    functionName: "getBatchesByAddress",
+    args: [address],
+    enabled: !!address,
+  });
 
-  
-
-  // Mock function for encoding ABI call - in a real app, you'd use ethers.js or viem
-  const encodeAbiCall = (functionName: string, abi: any[], args: any[]) => {
-    // This is just a placeholder - in a real app you'd use proper ABI encoding
-    return '0x';
-  };
-
-  // Process all batches to find the ones the user owns
+  // Process user batches when data is available
   useEffect(() => {
     const processUserBatches = async () => {
-      if (!allBatchesData || !address) return;
+      if (!userBatchesData || !allBatchesData || !address) return;
       
-      const [ids, productDatas, quantities, creators, transferred] = allBatchesData as [
+      // Extract data from the contract responses
+      const [batchIds, quantities] = userBatchesData as [readonly bigint[], readonly bigint[]];
+      const [allIds, allProductDatas] = allBatchesData as [
         readonly bigint[],
         readonly string[],
         readonly bigint[],
@@ -141,34 +94,47 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
         readonly bigint[]
       ];
       
-      // Get user's quantities for each batch
-      const userQuantities = await fetchUserBatchQuantities(ids as bigint[]);
-      
-      // Filter batches where user has a positive quantity
+      // Create user batches from the data
       const userOwnedBatches: UserBatch[] = [];
       
-      for (let i = 0; i < ids.length; i++) {
-        if (userQuantities[i] > BigInt(0)) {
-          userOwnedBatches.push({
-            id: ids[i],
-            productData: productDatas[i],
-            availableQuantity: userQuantities[i]
-          });
-        }
+      for (let i = 0; i < batchIds.length; i++) {
+        const batchId = batchIds[i];
+        const quantity = quantities[i];
+        
+        // Find the product data from the all batches data
+        const batchIndex = allIds.findIndex(id => id === batchId);
+        const productData = batchIndex !== -1 ? allProductDatas[batchIndex] : "Unknown Product";
+
+        const productName=JSON.parse(JSON.parse(productData));
+        console.log(productName)
+   
+        
+        userOwnedBatches.push({
+          id: batchId,
+          productData: productData,
+          availableQuantity: quantity,
+          productName: productName.ProductName
+        });
       }
+      console.log(userOwnedBatches)
+
+      
       
       setUserBatches(userOwnedBatches);
+      setIsFetchingBatches(false);
     };
     
+    setIsFetchingBatches(true);
     processUserBatches();
-  }, [allBatchesData, address]);
+  }, [userBatchesData, allBatchesData, address]);
 
   // Load batches when drawer opens
   useEffect(() => {
-    if (open) {
-      refetchBatches();
+    if (open && address) {
+      refetchAllBatches();
+      refetchUserBatches();
     }
-  }, [open, refetchBatches]);
+  }, [open, address, refetchAllBatches, refetchUserBatches]);
 
   // Function to add a batch from the user's batches list
   const addBatchFromList = (batchId: bigint, availableQuantity: bigint) => {
@@ -306,7 +272,8 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
       setBatchInputs([{ batchId: "", quantity: "" }]);
       
       // Refresh batch data
-      refetchBatches();
+      refetchAllBatches();
+      refetchUserBatches();
       
       setOpen(false);
     } catch (error) {
@@ -326,11 +293,17 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
     return batchInputs.some(input => input.batchId === batchId.toString() && input.batchId !== "");
   };
 
+  // Determine if we're loading data
+  const isLoading = isLoadingAllBatches || isLoadingUserBatches || isFetchingBatches;
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>
-          <Button className="w-full">Transfer Batches</Button>
+            <Button className="w-full md:w-4/5 lg:w-2/3 mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-4 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 text-lg my-6">
+            <Plus className="h-6 w-6" />
+            Transfer Batches
+            </Button>
         </DrawerTrigger>
         <DrawerContent className="max-h-[90vh] overflow-auto">
           <div className="mx-auto w-full max-w-lg">
@@ -342,13 +315,13 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
             </DrawerHeader>
             
             <div className="p-4">
-              {/* Your Batches Section */}
+             
               <Card className="mb-6">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-md">Your Available Batches</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {isLoadingBatches || isFetchingBatches ? (
+                  {isLoading ? (
                     <div className="flex justify-center items-center py-6">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                       <span className="ml-2 text-muted-foreground">Loading your batches...</span>
@@ -376,14 +349,23 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div className="flex items-center">
-                                      {batch.productData.length > 20 
-                                        ? `${batch.productData.slice(0, 20)}...` 
-                                        : batch.productData}
+                                      {batch.productName}
+                                      {/* {batch.productName.length > 20 
+                                        ? `${batch.productName.slice(0, 20)}...` 
+                                        : batch.productName} */}
                                       <Info className="h-4 w-4 ml-1 text-muted-foreground" />
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p className="max-w-xs">{batch.productData}</p>
+                                  <TooltipContent>
+                                    <div className="max-w-xs">
+                                      {Object.entries(JSON.parse(JSON.parse(batch.productData))).map(([key, value]) => (
+                                        <p key={key}>
+                                          <strong>{key}:</strong> {value}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

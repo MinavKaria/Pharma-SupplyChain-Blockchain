@@ -17,6 +17,8 @@ contract AdvancedSupplyChain is Ownable(msg.sender) {
         address from;
         address to;
         uint256 quantity;
+        Role fromRole;
+        Role toRole;
     }
 
     struct ProductBatch {
@@ -145,7 +147,9 @@ contract AdvancedSupplyChain is Ownable(msg.sender) {
         batch.transfers.push(Transfer({
             from: msg.sender,
             to: _recipient,
-            quantity: quantity
+            quantity: quantity,
+            fromRole: userRoles[msg.sender],
+            toRole: userRoles[_recipient]
         }));
 
         if (senderRole == Role.Manufacturer) {

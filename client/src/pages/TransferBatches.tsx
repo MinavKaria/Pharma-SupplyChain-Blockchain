@@ -140,7 +140,7 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
   const addBatchFromList = (batchId: bigint, availableQuantity: bigint) => {
     // Find an empty slot or append to the end
     const emptyIndex = batchInputs.findIndex(input => input.batchId === "");
-    
+    console.log(availableQuantity)
     if (emptyIndex !== -1) {
       const newBatchInputs = [...batchInputs];
       newBatchInputs[emptyIndex] = {
@@ -245,19 +245,7 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
       // Call the contract
       const tx = await writeContractAsync({
         address: contractAddr,
-        abi: [
-          {
-            name: "transferBatch",
-            type: "function",
-            stateMutability: "nonpayable",
-            inputs: [
-              { name: "_batchIds", type: "uint256[]" },
-              { name: "_recipient", type: "address" },
-              { name: "_quantities", type: "uint256[]" },
-            ],
-            outputs: [],
-          },
-        ],
+        abi: abi,
         functionName: "transferBatch",
         args: [batchIds, recipient as `0x${string}`, quantities],
       });
@@ -267,11 +255,11 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
         description: "Batches transferred successfully!",
       });
 
-      // Reset form
+      console.log("Transaction submitted:", tx);
+
       setRecipient("");
       setBatchInputs([{ batchId: "", quantity: "" }]);
       
-      // Refresh batch data
       refetchAllBatches();
       refetchUserBatches();
       
@@ -361,7 +349,7 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
                                     <div className="max-w-xs">
                                       {Object.entries(JSON.parse(JSON.parse(batch.productData))).map(([key, value]) => (
                                         <p key={key}>
-                                          <strong>{key}:</strong> {value}
+                                          <strong>{key}:</strong> {String(value)}
                                         </p>
                                       ))}
                                     </div>

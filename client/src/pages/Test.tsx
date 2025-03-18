@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAccount, useContractRead } from 'wagmi';
+import { useState, useEffect, useRef } from 'react';
+import { useAccount } from 'wagmi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -8,105 +8,165 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import * as d3 from 'd3';
 import abi from '@/configs/abi';
+import { useReadContract } from 'wagmi';
 
 // Import contract address from environment variables
 const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
 const contractABI = abi;
 
-// Role mapping for visualization
-const roleMapping = {
-  0: "Manufacturer",
-  1: "Distributor", 
-  2: "Retailer",
-  3: "Customer"
+// Define role enum to match the Solidity contract
+const Role = {
+  CUSTOMER: 0,
+  MANUFACTURER: 1,
+  DISTRIBUTOR: 2,
+  RETAILER: 3
 };
 
-// D3 Supply Chain Flow Graph Component
-const SupplyChainGraph = ({ chainOfCustody, transfers }) => {
+// Role mapping for visualization
+const roleMapping = {
+  0: "Customer",
+  1: "Manufacturer",
+  2: "Distributor", 
+  3: "Retailer"
+};
+
+// Color mapping for roles
+const roleColors = {
+  "Manufacturer": "#4338ca", // indigo
+  "Distributor": "#0369a1", // sky
+  "Retailer": "#15803d",    // green
+  "Customer": "#b45309"     // amber
+};
+
+interface Transfer {
+  from: string;
+  to: string;
+  quantity: number;
+  fromRole: number;
+  toRole: number;
+}
+
+interface SupplyChainTreeGraphProps {
+  chainOfCustody: string[];
+  transfers: Transfer[];
+}
+
+const SupplyChainTreeGraph: React.FC<SupplyChainTreeGraphProps> = ({ chainOfCustody, transfers }) => {
   const svgRef = useRef(null);
   
   useEffect(() => {
-    if (!chainOfCustody || chainOfCustody.length === 0) return;
+    if (!transfers || transfers.length === 0) return;
     
     // Clear previous visualization
     d3.select(svgRef.current).selectAll("*").remove();
     
-    const width = 800;
-    const height = 300;
+    // Build a proper tree structure from transfers
+    const nodeMap = new Map();
+    
+    // Add all addresses from transfers to nodeMap with accurate roles
+    transfers.forEach(transfer => {
+      const fromRole = roleMapping[transfer.fromRole];
+      const toRole = roleMapping[transfer.toRole];
+      
+      if (!nodeMap.has(transfer.from)) {
+        nodeMap.set(transfer.from, {
+          id: transfer.from,
+          children: [],
+          childLinks: [],
+          role: fromRole
+        });
+      }
+      
+      if (!nodeMap.has(transfer.to)) {
+        nodeMap.set(transfer.to, {
+          id: transfer.to,
+          children: [],
+          childLinks: [],
+          role: toRole
+        });
+      }
+    });
+    
+    // Process transfers to build parent-child relationships
+    transfers.forEach(transfer => {
+      const fromNode = nodeMap.get(transfer.from);
+      
+      // Check if this link already exists
+      const existingLinkIndex = fromNode.childLinks.findIndex(link => link.target === transfer.to);
+      
+      if (existingLinkIndex >= 0) {
+        // Update the existing link with the new quantity
+        const oldQuantity = parseInt(fromNode.childLinks[existingLinkIndex].quantity);
+        const newQuantity = oldQuantity + transfer.quantity;
+        fromNode.childLinks[existingLinkIndex].quantity = newQuantity.toString();
+        fromNode.childLinks[existingLinkIndex].transfers = fromNode.childLinks[existingLinkIndex].transfers || [];
+        fromNode.childLinks[existingLinkIndex].transfers.push(transfer);
+      } else {
+        // Add a new link
+        fromNode.children.push(transfer.to);
+        fromNode.childLinks.push({
+          target: transfer.to,
+          quantity: transfer.quantity.toString(),
+          transfers: [transfer]
+        });
+      }
+    });
+    
+    // Find the root node (manufacturer) - usually the first in chain of custody
+    let rootId = chainOfCustody[0];
+    
+    // Create hierarchy for D3 tree layout
+    const createHierarchy = (nodeId) => {
+      const node = nodeMap.get(nodeId);
+      if (!node) return null;
+      
+      return {
+        id: node.id,
+        role: node.role,
+        quantity: undefined,
+        children: node.children.map(childId => {
+          const child = createHierarchy(childId);
+          if (child) {
+            const link = node.childLinks.find(link => link.target === childId);
+            if (link) {
+              child.quantity = link.quantity;
+              child.transfers = link.transfers;
+            }
+          }
+          return child;
+        }).filter(Boolean)
+      };
+    };
+    
+    const hierarchyData = createHierarchy(rootId);
+    
+    // Set up dimensions for the tree layout
+    const width = 1000;
+    const height = 800; // Increased height for better spacing
     const nodeRadius = 40;
-    const nodePadding = 120;
+    const margin = { top: 80, right: 160, bottom: 80, left: 160 }; // Increased margins
     
     // Create SVG
     const svg = d3.select(svgRef.current)
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("width", "100%")
       .attr("height", "100%")
-      .attr("style", "max-height: 300px;");
+      .attr("style", "max-height: 800px;");
     
-    // Define transfer quantities for edge labels
-    const transferMap = {};
-    transfers.forEach(transfer => {
-      const key = `${transfer.from}-${transfer.to}`;
-      transferMap[key] = transfer.quantity.toString();
-    });
+    // Create a group to contain the tree
+    const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
     
-    // Create nodes data
-    const nodes = chainOfCustody.map((address, i) => {
-      // Determine role based on position
-      let role = "";
-      if (i === 0) role = "Manufacturer";
-      else if (i === chainOfCustody.length - 1) {
-        role = i === 1 ? "Distributor" : i === 2 ? "Retailer" : "Customer";
-      } else {
-        role = i === 1 ? "Distributor" : "Retailer";
-      }
-      
-      return {
-        id: i,
-        address: address,
-        role: role,
-        x: (i * nodePadding) + 70,
-        y: height / 2
-      };
-    });
+    // Create a tree layout with more spacing
+    const treeLayout = d3.tree()
+      .size([height - margin.top - margin.bottom, width - margin.left - margin.right])
+      .separation((a, b) => (a.parent === b.parent ? 3 : 5)); // Increased separation
     
-    // Create links between adjacent nodes
-    const links = [];
-    for (let i = 0; i < nodes.length - 1; i++) {
-      links.push({
-        source: i,
-        target: i + 1,
-        sourceAddress: nodes[i].address,
-        targetAddress: nodes[i + 1].address,
-        quantity: transferMap[`${nodes[i].address}-${nodes[i + 1].address}`] || "?"
-      });
-    }
+    // Create the root hierarchy
+    const root = d3.hierarchy(hierarchyData);
     
-    // Add connecting lines
-    svg.selectAll(".link")
-      .data(links)
-      .enter()
-      .append("line")
-      .attr("class", "link")
-      .attr("x1", d => nodes[d.source].x + nodeRadius)
-      .attr("y1", d => nodes[d.source].y)
-      .attr("x2", d => nodes[d.target].x - nodeRadius)
-      .attr("y2", d => nodes[d.target].y)
-      .attr("stroke", "#2563eb")
-      .attr("stroke-width", 2);
-    
-    // Add quantity labels
-    svg.selectAll(".quantity-label")
-      .data(links)
-      .enter()
-      .append("text")
-      .attr("class", "quantity-label")
-      .attr("x", d => (nodes[d.source].x + nodes[d.target].x) / 2)
-      .attr("y", d => (nodes[d.source].y + nodes[d.target].y) / 2 - 10)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#4b5563")
-      .attr("font-size", "12px")
-      .text(d => `Qty: ${d.quantity}`);
+    // Assign positions to nodes
+    treeLayout(root);
     
     // Create arrow markers for direction
     svg.append("defs").selectAll("marker")
@@ -114,7 +174,7 @@ const SupplyChainGraph = ({ chainOfCustody, transfers }) => {
       .enter().append("marker")
       .attr("id", d => d)
       .attr("viewBox", "0 -5 10 10")
-      .attr("refX", 8)
+      .attr("refX", 20)
       .attr("refY", 0)
       .attr("markerWidth", 6)
       .attr("markerHeight", 6)
@@ -123,56 +183,76 @@ const SupplyChainGraph = ({ chainOfCustody, transfers }) => {
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "#2563eb");
     
-    // Apply markers to lines
-    svg.selectAll(".link")
+    // Add links (edges)
+    const link = g.selectAll(".link")
+      .data(root.links())
+      .enter().append("path")
+      .attr("class", "link")
+      .attr("d", d3.linkHorizontal()
+        .x(d => d.y)
+        .y(d => d.x))
+      .attr("fill", "none")
+      .attr("stroke", "#2563eb")
+      .attr("stroke-width", 2)
       .attr("marker-end", "url(#arrow)");
     
-    // Add nodes (circles)
-    const nodeGroups = svg.selectAll(".node")
-      .data(nodes)
-      .enter()
-      .append("g")
-      .attr("class", "node")
-      .attr("transform", d => `translate(${d.x}, ${d.y})`);
+    // Add quantity labels on links
+    g.selectAll(".quantity-label")
+      .data(root.links())
+      .enter().append("text")
+      .attr("class", "quantity-label")
+      .attr("x", d => (d.source.y + d.target.y) / 2)
+      .attr("y", d => (d.source.x + d.target.x) / 2 - 10)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#4b5563")
+      .attr("font-size", "12px")
+      .text(d => {
+        if (d.target.data.transfers && d.target.data.transfers.length > 1) {
+          return `${d.target.data.quantity} units (${d.target.data.transfers.length} transfers)`;
+        }
+        return `Qty: ${d.target.data.quantity || "?"}`;
+      });
     
-    // Circles for each node with different colors based on role
-    nodeGroups.append("circle")
+    // Create node groups
+    const node = g.selectAll(".node")
+      .data(root.descendants())
+      .enter().append("g")
+      .attr("class", "node")
+      .attr("transform", d => `translate(${d.y},${d.x})`);
+    
+    // Add circles for nodes
+    node.append("circle")
       .attr("r", nodeRadius)
-      .attr("fill", d => {
-        if (d.role === "Manufacturer") return "#4338ca"; // indigo
-        if (d.role === "Distributor") return "#0369a1"; // sky
-        if (d.role === "Retailer") return "#15803d"; // green
-        return "#b45309"; // amber (for customer)
-      })
+      .attr("fill", d => roleColors[d.data.role] || "#b45309")
       .attr("stroke", "#f8fafc")
       .attr("stroke-width", 2);
     
-    // Role labels
-    nodeGroups.append("text")
+    // Add role labels
+    node.append("text")
       .attr("text-anchor", "middle")
       .attr("y", -5)
       .attr("fill", "white")
       .attr("font-size", "12px")
       .attr("font-weight", "bold")
-      .text(d => d.role);
+      .text(d => d.data.role);
     
-    // Truncated address labels
-    nodeGroups.append("text")
+    // Add address labels
+    node.append("text")
       .attr("text-anchor", "middle")
       .attr("y", 10)
       .attr("fill", "white")
       .attr("font-size", "10px")
-      .text(d => `${d.address.substring(0, 6)}...`);
+      .text(d => `${d.data.id.substring(0, 6)}...`);
     
     // Add a legend
     const legend = svg.append("g")
       .attr("transform", "translate(20, 20)");
     
     const legendData = [
-      { role: "Manufacturer", color: "#4338ca" },
-      { role: "Distributor", color: "#0369a1" },
-      { role: "Retailer", color: "#15803d" },
-      { role: "Customer", color: "#b45309" }
+      { role: "Manufacturer", color: roleColors["Manufacturer"] },
+      { role: "Distributor", color: roleColors["Distributor"] },
+      { role: "Retailer", color: roleColors["Retailer"] },
+      { role: "Customer", color: roleColors["Customer"] }
     ];
     
     legendData.forEach((item, i) => {
@@ -192,17 +272,27 @@ const SupplyChainGraph = ({ chainOfCustody, transfers }) => {
         .text(item.role);
     });
     
+    // Add zoom capability
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 2])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+    
+    svg.call(zoom);
+    
   }, [chainOfCustody, transfers]);
   
   return (
     <div className="w-full overflow-x-auto pb-6">
-      <svg ref={svgRef} className="w-full"></svg>
+      <svg ref={svgRef} width="100%" height="800"></svg>
     </div>
   );
 };
 
+// Updated BatchTransferGraph component
 const BatchTransferGraph = ({ batchId }) => {
-  const { data, isLoading, isError } = useContractRead({
+  const { data, isLoading, isError } = useReadContract({
     address: contractAddress,
     abi: contractABI,
     functionName: 'getBatchDetails',
@@ -263,42 +353,27 @@ const BatchTransferGraph = ({ batchId }) => {
       <Card>
         <CardHeader>
           <CardTitle>Supply Chain Flow Visualization</CardTitle>
-          <CardDescription>Visual representation of product movement</CardDescription>
+          <CardDescription>Visual representation of product movement (including multiple transfers and splits)</CardDescription>
         </CardHeader>
         <CardContent>
-          <SupplyChainGraph chainOfCustody={chainOfCustody} transfers={transfers} />
+          <SupplyChainTreeGraph chainOfCustody={chainOfCustody} transfers={transfers} />
+          <div className="mt-4 px-4 py-2 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              This visualization shows the complete supply chain journey including repeated transfers to the same recipient.
+              Each node is colored by role, and links show the total quantity transferred between entities.
+              Zoom and pan the diagram for a better view of complex supply chains.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Supply Chain Data</CardTitle>
-          <CardDescription>Detailed chain of custody and transfers</CardDescription>
+          <CardDescription>Detailed transfer history with role information</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <div>
-              <h4 className="font-medium mb-2">Chain of Custody</h4>
-              <div className="flex overflow-x-auto">
-                {chainOfCustody.map((address, index) => (
-                  <div key={index} className="flex items-center min-w-max">
-                    <div className="px-4 py-2 bg-slate-100 rounded border">
-                      <p className="text-xs font-mono truncate max-w-xs">{address}</p>
-                      <p className="text-xs text-slate-500">
-                        {index === 0 ? 'Manufacturer' : 
-                        index === chainOfCustody.length - 1 ? 'Current Holder' : 
-                        index === 1 ? 'Distributor' : 
-                        index === 2 ? 'Retailer' : `Holder ${index}`}
-                      </p>
-                    </div>
-                    {index < chainOfCustody.length - 1 && (
-                      <div className="px-2">→</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <div>
               <h4 className="font-medium mb-2">Transfer History</h4>
               <div className="overflow-x-auto">
@@ -308,6 +383,8 @@ const BatchTransferGraph = ({ batchId }) => {
                       <th className="p-2 border">From</th>
                       <th className="p-2 border">To</th>
                       <th className="p-2 border">Quantity</th>
+                      <th className="p-2 border">From Role</th>
+                      <th className="p-2 border">To Role</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -320,6 +397,8 @@ const BatchTransferGraph = ({ batchId }) => {
                           <p className="text-xs font-mono truncate max-w-xs">{transfer.to}</p>
                         </td>
                         <td className="p-2 border">{transfer.quantity.toString()}</td>
+                        <td className="p-2 border">{roleMapping[transfer.fromRole]}</td>
+                        <td className="p-2 border">{roleMapping[transfer.toRole]}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -333,206 +412,7 @@ const BatchTransferGraph = ({ batchId }) => {
   );
 };
 
-const BatchList = () => {
-  const { data, isLoading, isError } = useContractRead({
-    address: contractAddress,
-    abi: contractABI,
-    functionName: 'getAllBatches',
-  });
-
-  if (isLoading) return <div className="text-center py-8">Loading all batches...</div>;
-  if (isError) return <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>Failed to fetch batches</AlertDescription></Alert>;
-  if (!data) return null;
-
-  const [ids, productDatas, quantities, creators, quantityTransferred] = data;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>All Batches</CardTitle>
-        <CardDescription>Overview of all product batches in the system</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-left bg-slate-100">
-                <th className="p-2 border">Batch ID</th>
-                <th className="p-2 border">Product</th>
-                <th className="p-2 border">Total Quantity</th>
-                <th className="p-2 border">Transferred</th>
-                <th className="p-2 border">Creator</th>
-                <th className="p-2 border">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ids.map((id, index) => (
-                <tr key={id.toString()}>
-                  <td className="p-2 border">{id.toString()}</td>
-                  <td className="p-2 border">{productDatas[index]}</td>
-                  <td className="p-2 border">{quantities[index].toString()}</td>
-                  <td className="p-2 border">{quantityTransferred[index].toString()}</td>
-                  <td className="p-2 border">
-                    <p className="text-xs font-mono truncate max-w-xs">{creators[index]}</p>
-                  </td>
-                  <td className="p-2 border">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => document.getElementById('batch-id-input').value = id.toString()}
-                    >
-                      View Details
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const UserTransfers = () => {
-  const { address } = useAccount();
-  
-  const { data, isLoading, isError } = useContractRead({
-    address: contractAddress,
-    abi: contractABI,
-    functionName: 'getTransfersByAddress',
-    args: [address],
-    enabled: !!address,
-  });
-
-  if (!address) return <Alert><AlertTitle>Connect Wallet</AlertTitle><AlertDescription>Please connect your wallet to view your transfers</AlertDescription></Alert>;
-  if (isLoading) return <div className="text-center py-8">Loading your transfers...</div>;
-  if (isError) return <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>Failed to fetch your transfers</AlertDescription></Alert>;
-  if (!data) return null;
-
-  const [batchIds, fromAddresses, toAddresses, quantities] = data;
-  
-  // Separate incoming and outgoing transfers
-  const incomingTransfers = [];
-  const outgoingTransfers = [];
-  
-  for (let i = 0; i < batchIds.length; i++) {
-    const transfer = {
-      batchId: batchIds[i].toString(),
-      from: fromAddresses[i],
-      to: toAddresses[i],
-      quantity: quantities[i].toString()
-    };
-    
-    if (toAddresses[i] === address) {
-      incomingTransfers.push(transfer);
-    } else {
-      outgoingTransfers.push(transfer);
-    }
-  }
-
-  // Get a count of batches per partner address for visualization
-  const partnerCounts = {};
-  [...incomingTransfers, ...outgoingTransfers].forEach(transfer => {
-    const partner = transfer.from === address ? transfer.to : transfer.from;
-    partnerCounts[partner] = (partnerCounts[partner] || 0) + 1;
-  });
-
-  // Extract data for the summary chart
-  const chartData = Object.entries(partnerCounts).map(([address, count]) => ({
-    address: `${address.substring(0, 8)}...`,
-    count
-  }));
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Account</CardTitle>
-          <CardDescription>Connected address: {address}</CardDescription>
-        </CardHeader>
-      </Card>
-      
-      <Tabs defaultValue="incoming">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="incoming">Incoming Transfers</TabsTrigger>
-          <TabsTrigger value="outgoing">Outgoing Transfers</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="incoming" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Incoming Transfers</CardTitle>
-              <CardDescription>Products transferred to you</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {incomingTransfers.length === 0 ? (
-                <p className="text-center py-4 text-slate-500">No incoming transfers found</p>
-              ) : (
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="text-left bg-slate-100">
-                      <th className="p-2 border">Batch ID</th>
-                      <th className="p-2 border">From</th>
-                      <th className="p-2 border">Quantity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {incomingTransfers.map((transfer, i) => (
-                      <tr key={i}>
-                        <td className="p-2 border">{transfer.batchId}</td>
-                        <td className="p-2 border">
-                          <p className="text-xs font-mono truncate max-w-xs">{transfer.from}</p>
-                        </td>
-                        <td className="p-2 border">{transfer.quantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="outgoing" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Outgoing Transfers</CardTitle>
-              <CardDescription>Products you've transferred to others</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {outgoingTransfers.length === 0 ? (
-                <p className="text-center py-4 text-slate-500">No outgoing transfers found</p>
-              ) : (
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="text-left bg-slate-100">
-                      <th className="p-2 border">Batch ID</th>
-                      <th className="p-2 border">To</th>
-                      <th className="p-2 border">Quantity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {outgoingTransfers.map((transfer, i) => (
-                      <tr key={i}>
-                        <td className="p-2 border">{transfer.batchId}</td>
-                        <td className="p-2 border">
-                          <p className="text-xs font-mono truncate max-w-xs">{transfer.to}</p>
-                        </td>
-                        <td className="p-2 border">{transfer.quantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
-
+// The existing CheckTransactions component that uses BatchTransferGraph
 const CheckTransactions = () => {
   const [batchId, setBatchId] = useState('');
   const [activeTab, setActiveTab] = useState('batch-search');
@@ -582,6 +462,233 @@ const CheckTransactions = () => {
         
         <TabsContent value="user-transfers" className="mt-6">
           <UserTransfers />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+// BatchList component
+const BatchList = () => {
+  const { data, isLoading, isError } = useReadContract({
+    address: contractAddress,
+    abi: contractABI,
+    functionName: 'getAllBatches',
+  });
+
+  if (isLoading) return <div className="text-center py-8">Loading all batches...</div>;
+  if (isError) return <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>Failed to fetch batches</AlertDescription></Alert>;
+  if (!data) return null;
+
+  const [ids, productDatas, quantities, creators, quantityTransferred] = data;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>All Batches</CardTitle>
+        <CardDescription>Overview of all product batches in the system</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="text-left bg-slate-100">
+                <th className="p-2 border">Batch ID</th>
+                <th className="p-2 border">Product</th>
+                <th className="p-2 border">Total Quantity</th>
+                <th className="p-2 border">Transferred</th>
+                <th className="p-2 border">Creator</th>
+                <th className="p-2 border">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ids.map((id, index) => (
+                <tr key={id.toString()}>
+                  <td className="p-2 border">{id.toString()}</td>
+                  <td className="p-2 border">{productDatas[index]}</td>
+                  <td className="p-2 border">{quantities[index].toString()}</td>
+                  <td className="p-2 border">{quantityTransferred[index].toString()}</td>
+                  <td className="p-2 border">
+                    <p className="text-xs font-mono truncate max-w-xs">{creators[index]}</p>
+                  </td>
+                  <td className="p-2 border">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        const input = document.getElementById('batch-id-input');
+                        if (input) {
+                          input.value = id.toString();
+                          document.getElementById('batch-id-input').dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                      }}
+                    >
+                      View Details
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// UserTransfers component
+const UserTransfers = () => {
+  const { address } = useAccount();
+  
+  const { data, isLoading, isError } = useReadContract({
+    address: contractAddress,
+    abi: contractABI,
+    functionName: 'getTransfersByAddress',
+    args: [address],
+    enabled: !!address,
+  });
+
+  if (!address) return <Alert><AlertTitle>Connect Wallet</AlertTitle><AlertDescription>Please connect your wallet to view your transfers</AlertDescription></Alert>;
+  if (isLoading) return <div className="text-center py-8">Loading your transfers...</div>;
+  if (isError) return <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>Failed to fetch your transfers</AlertDescription></Alert>;
+  if (!data) return null;
+
+  const [batchIds, fromAddresses, toAddresses, quantities] = data;
+  
+  // Separate incoming and outgoing transfers
+  const incomingTransfers = [];
+  const outgoingTransfers = [];
+  
+  for (let i = 0; i < batchIds.length; i++) {
+    const transfer = {
+      batchId: batchIds[i].toString(),
+      from: fromAddresses[i],
+      to: toAddresses[i],
+      quantity: quantities[i].toString()
+    };
+    
+    if (toAddresses[i] === address) {
+      incomingTransfers.push(transfer);
+    } else {
+      outgoingTransfers.push(transfer);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Account</CardTitle>
+          <CardDescription>Connected address: {address}</CardDescription>
+        </CardHeader>
+      </Card>
+      
+      <Tabs defaultValue="incoming">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="incoming">Incoming Transfers</TabsTrigger>
+          <TabsTrigger value="outgoing">Outgoing Transfers</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="incoming" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Incoming Transfers</CardTitle>
+              <CardDescription>Products transferred to you</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {incomingTransfers.length === 0 ? (
+                <p className="text-center py-4 text-slate-500">No incoming transfers found</p>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="text-left bg-slate-100">
+                      <th className="p-2 border">Batch ID</th>
+                      <th className="p-2 border">From</th>
+                      <th className="p-2 border">Quantity</th>
+                      <th className="p-2 border">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomingTransfers.map((transfer, i) => (
+                      <tr key={i}>
+                        <td className="p-2 border">{transfer.batchId}</td>
+                        <td className="p-2 border">
+                          <p className="text-xs font-mono truncate max-w-xs">{transfer.from}</p>
+                        </td>
+                        <td className="p-2 border">{transfer.quantity}</td>
+                        <td className="p-2 border">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              const input = document.getElementById('batch-id-input');
+                              if (input) {
+                                input.value = transfer.batchId;
+                                document.getElementById('batch-id-input').dispatchEvent(new Event('input', { bubbles: true }));
+                              }
+                            }}
+                          >
+                            View Batch
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="outgoing" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Outgoing Transfers</CardTitle>
+              <CardDescription>Products you've transferred to others</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {outgoingTransfers.length === 0 ? (
+                <p className="text-center py-4 text-slate-500">No outgoing transfers found</p>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="text-left bg-slate-100">
+                      <th className="p-2 border">Batch ID</th>
+                      <th className="p-2 border">To</th>
+                      <th className="p-2 border">Quantity</th>
+                      <th className="p-2 border">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {outgoingTransfers.map((transfer, i) => (
+                      <tr key={i}>
+                        <td className="p-2 border">{transfer.batchId}</td>
+                        <td className="p-2 border">
+                          <p className="text-xs font-mono truncate max-w-xs">{transfer.to}</p>
+                        </td>
+                        <td className="p-2 border">{transfer.quantity}</td>
+                        <td className="p-2 border">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              const input = document.getElementById('batch-id-input');
+                              if (input) {
+                                input.value = transfer.batchId;
+                                document.getElementById('batch-id-input').dispatchEvent(new Event('input', { bubbles: true }));
+                              }
+                            }}
+                          >
+                            View Batch
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

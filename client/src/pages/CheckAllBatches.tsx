@@ -133,7 +133,7 @@ function CheckAllBatches(): JSX.Element {
       creator: batch.creator
     };
     
-    return `${baseUrl}/verify-batch?data=${encodeURIComponent(JSON.stringify(batchInfo))}`;
+    return `${baseUrl}/verify-batch?id=${encodeURIComponent(JSON.stringify(batchInfo.id))}`;
   };
 
   // Copy QR content to clipboard
@@ -257,7 +257,7 @@ function CheckAllBatches(): JSX.Element {
                       <TableCell className="text-right">{batch.remaining}</TableCell>
                       <TableCell>
                         <Badge 
-                          variant={batch.remaining === 0 ? "destructive" : batch.remaining < batch.quantity / 4 ? "warning" : "success"}
+                          variant={batch.remaining === 0 ? "destructive" : batch.remaining < batch.quantity / 4 ? "secondary" : "default"}
                         >
                           {batch.remaining === 0 ? "Depleted" : batch.remaining < batch.quantity / 4 ? "Low Stock" : "Available"}
                         </Badge>

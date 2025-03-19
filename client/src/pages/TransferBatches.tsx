@@ -32,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import UserTransfers from "@/components/Transactions";
 
 interface BatchInput {
   batchId: string;
@@ -284,6 +285,7 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
   const isLoading = isLoadingAllBatches || isLoadingUserBatches || isFetchingBatches;
 
   return (
+    <>
     <div className="w-full max-w-2xl mx-auto">
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>
@@ -292,7 +294,7 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
             Transfer Batches
             </Button>
         </DrawerTrigger>
-        <DrawerContent className="">
+        <DrawerContent className="overflow-y-auto">
           <div className="mx-auto w-full max-w-lg">
             <DrawerHeader>
               <DrawerTitle>Transfer Product Batches</DrawerTitle>
@@ -511,6 +513,8 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
         </DrawerContent>
       </Drawer>
     </div>
+    <UserTransfers/>
+    </>
   );
 };
 

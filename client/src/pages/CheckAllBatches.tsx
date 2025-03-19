@@ -245,7 +245,7 @@ function CheckAllBatches(): JSX.Element {
                       <TableCell className="flex items-center">
                         {truncateAddress(batch.creator)}
                         <a 
-                          href={`https://etherscan.io/address/${batch.creator}`} 
+                          href={`https://sepolia.etherscan.io/address/${batch.creator}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="ml-1"

@@ -75,8 +75,7 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
     address: contractAddr,
     abi: abi,
     functionName: "getBatchesByAddress",
-    args: [address],
-    enabled: !!address,
+    args: [address]
   });
 
   // Process user batches when data is available
@@ -288,12 +287,12 @@ const TransferBatches: React.FC<TransferBatchesProps> = ({ contractAddress }) =>
     <div className="w-full max-w-2xl mx-auto">
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>
-            <Button className="w-full md:w-4/5 lg:w-2/3 mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-4 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 text-lg my-6">
+            <Button className="w-full md:w-4/5 lg:w-2/3 mx-auto bg-gradient-to-r from-black to-slate-700 hover:from-slate-600 hover:to-slate-700 text-white font-semibold py-4 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 text-lg my-6">
             <Plus className="h-6 w-6" />
             Transfer Batches
             </Button>
         </DrawerTrigger>
-        <DrawerContent className="max-h-[90vh] overflow-auto">
+        <DrawerContent className="">
           <div className="mx-auto w-full max-w-lg">
             <DrawerHeader>
               <DrawerTitle>Transfer Product Batches</DrawerTitle>

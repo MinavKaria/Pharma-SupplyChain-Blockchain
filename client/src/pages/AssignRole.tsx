@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ExternalLink } from "lucide-react";
 
 const SET_ASSIGN_ROLE = gql`
   mutation Mutation($walletAddress: String!) {
@@ -165,7 +166,15 @@ const UserTable = ({
   assignedOnly?: boolean;
 }) => {
   const [assigningUser, setAssigningUser] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  console.log(users);
+
+  const truncateAddress = (address: string): string => {
+    return `${address.substring(0, 6)}...${address.substring(
+      address.length - 4
+    )}`;
+  };
 
   const {
     writeContract,
@@ -176,15 +185,14 @@ const UserTable = ({
     reset: resetContract,
   } = useWriteContract();
 
-  const [assignRole, { loading: assignLoading, error: assignError }] = 
+  const [assignRole, { loading: assignLoading, error: assignError }] =
     useMutation(SET_ASSIGN_ROLE, {
       refetchQueries: ["GetUsers", "GetAssignedUsers"],
     });
 
-  // Handle the role assignment process
   const handleAssignRole = async (user: User) => {
     setAssigningUser(user.walletAddress);
-    
+
     let role = 0;
     if (user.role === "manufacturer") {
       role = 1;
@@ -202,24 +210,17 @@ const UserTable = ({
     });
   };
 
-  // When contract write is successful, update the database
-  // This effect runs when isContractSuccess changes
   useEffect(() => {
     if (isContractSuccess && assigningUser) {
-      // Only now call the GraphQL mutation after successful blockchain transaction
       assignRole({
         variables: {
-          walletAddress: assigningUser
-        }
+          walletAddress: assigningUser,
+        },
       });
-      
-      // Reset state
+
       setAssigningUser("");
-      
-      // Close dialog after successful assignment
-      setIsDialogOpen(false);
-      
-      // Reset contract state
+
+      setSelectedUserId(null);
       resetContract();
     }
   }, [isContractSuccess, assigningUser, assignRole, resetContract]);
@@ -248,8 +249,17 @@ const UserTable = ({
             <TableRow key={user.id} className="hover:bg-muted/50">
               <TableCell className="font-medium">{user.name}</TableCell>
               <TableCell>{user.email}</TableCell>
-              <TableCell className="truncate max-w-[150px]">
-                {user.walletAddress}
+              <TableCell className="truncate max-w-[150px] flex">
+                {truncateAddress(user.walletAddress)}
+                <a
+                  href={`https://sepolia.etherscan.io/address/${user.walletAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1"
+                  aria-label="View on Etherscan"
+                >
+                  <ExternalLink size={14} />
+                </a>
               </TableCell>
               <TableCell>{user.companyName}</TableCell>
               <TableCell>{user.role}</TableCell>
@@ -283,22 +293,32 @@ const UserTable = ({
               </TableCell>
               {!assignedOnly && (
                 <TableCell>
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger>
-                      <div
+                  <Dialog
+                    open={selectedUserId === user.id}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        setSelectedUserId(user.id);
+                      } else {
+                        setSelectedUserId(null);
+                      }
+                    }}
+                  >
+                    <DialogTrigger asChild>
+                      <Button
                         className={`${
-                          !user.assigned ? "bg-black" : " bg-slate-300"
+                          !user.assigned ? "bg-black" : "bg-slate-300"
                         } text-white p-2 rounded-md`}
+                        disabled={user.assigned}
                       >
                         Assign Role
-                      </div>
+                      </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Assign Role</DialogTitle>
                         <DialogDescription>
                           <div className="space-y-2 font-semibold py-2">
-                            <div>Name: {user.name}</div>
+                            <div>Name: {user.name} </div>
                             <div>Email: {user.email}</div>
                             <div>Company: {user.companyName}</div>
                             <div>Role: {user.role}</div>
@@ -306,8 +326,12 @@ const UserTable = ({
                           </div>
                         </DialogDescription>
                         <Button
-                          disabled={user.assigned || isContractPending || assignLoading}
-                          onClick={() => handleAssignRole(user)}
+                          disabled={
+                            user.assigned || isContractPending || assignLoading
+                          }
+                          onClick={() => {
+                            handleAssignRole(user);
+                          }}
                         >
                           {user.assigned
                             ? "Role Assigned"
@@ -322,9 +346,12 @@ const UserTable = ({
                             : "Assign Role"}
                         </Button>
                         {isContractError && (
-                          <p className="text-red-500 text-sm mt-2">
-                            Error: {failureReason?.message || "Transaction failed"}
-                          </p>
+                          <div className="mt-2 ">
+                            <p className="text-red-500 text-sm mt-2 text-wrap">
+                              Error:{" "}
+                              {failureReason?.message || "Transaction failed"}
+                            </p>
+                          </div>
                         )}
                         {assignError && (
                           <p className="text-red-500 text-sm mt-2">

@@ -2,8 +2,18 @@ import { Button } from "@/components/ui/button";
 import { useAccount } from "wagmi";
 import { useReadContracts } from "wagmi";
 import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  UserPlus,
+  Package,
+  ClipboardList,
+  Boxes,
+  ArrowRightLeft,
+  FileSearch,
+  QrCode,
+  Wallet
+} from "lucide-react";
 import abi from "@/configs/abi";
-
 
 function Navigation() {
   const account = useAccount();
@@ -35,75 +45,120 @@ function Navigation() {
   if (account.address === undefined) {
     return (
       <div className="flex flex-col min-h-screen">
-        <main className="flex-1 py-12">
-          <div className="container max-w-2xl mx-auto px-4">
-            <div className="space-y-6">
-              <p className="text-center text-gray-500">
-                Please connect your wallet for transactions
-              </p>
-            </div>
-          </div>
+        <main className="flex-1 flex items-center justify-center py-12">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <Wallet className="mx-auto h-12 w-12 text-primary" />
+                <h2 className="text-2xl font-bold">Wallet Connection Required</h2>
+                <p className="text-gray-500">
+                  Please connect your wallet to access the application features
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </main>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="flex flex-row justify-center gap-5 m-10">
-        <div className="flex flex-col justify-center gap-5">
-          {owner && account.address === owner.result && (
+    <div className="container mx-auto py-8 px-4">
+      <Card className="w-full max-w-3xl mx-auto">
+        <CardContent className="pt-6">
+          <h1 className="text-2xl font-bold mb-6 text-center">Supply Chain Management</h1>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {owner && account.address === owner.result && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex items-center justify-start gap-3 h-16"
+                onClick={() => {
+                  navigate("/assign");
+                }}
+              >
+                <UserPlus className="h-5 w-5" />
+                <span>Assign Role</span>
+              </Button>
+            )}
+            
+            {userRoles && userRoles.result === 1 && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex items-center justify-start gap-3 h-16"
+                onClick={() => {
+                  navigate("/create-batch");
+                }}
+              >
+                <Package className="h-5 w-5" />
+                <span>Create Batch</span>
+              </Button>
+            )}
+            
             <Button
+              variant="outline"
+              size="lg"
+              className="flex items-center justify-start gap-3 h-16"
+              onClick={() => navigate("/apply")}
+            >
+              <ClipboardList className="h-5 w-5" />
+              <span>Apply for Role</span>
+            </Button>
+            
+            {account.address === owner.result && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex items-center justify-start gap-3 h-16"
+                onClick={() => {
+                  navigate("/check-all-batches");
+                }}
+              >
+                <Boxes className="h-5 w-5" />
+                <span>Check All Batches</span>
+              </Button>
+            )}
+            
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex items-center justify-start gap-3 h-16"
               onClick={() => {
-                navigate("/assign");
+                navigate("/transfer");
               }}
             >
-              Assign Role
+              <ArrowRightLeft className="h-5 w-5" />
+              <span>Transfer Batch</span>
             </Button>
-          )}
-          {userRoles && userRoles.result === 1 && (
+            
             <Button
+              variant="outline"
+              size="lg"
+              className="flex items-center justify-start gap-3 h-16"
               onClick={() => {
-                navigate("/create-batch");
+                navigate("/check-transaction");
               }}
             >
-              Create Batch
+              <FileSearch className="h-5 w-5" />
+              <span>Check Transactions</span>
             </Button>
-          )}
-          <Button onClick={() => [navigate("/apply")]}>Apply for Role</Button>
-          {account.address === owner.result && (
+            
             <Button
+              variant="outline"
+              size="lg"
+              className="flex items-center justify-start gap-3 h-16"
               onClick={() => {
-                navigate("/check-all-batches");
+                navigate("/verify-batch");
               }}
             >
-              Check All Batches
+              <QrCode className="h-5 w-5" />
+              <span>Check Batch Details (QR)</span>
             </Button>
-          )}
-          <Button
-            onClick={() => {
-              navigate("/transfer");
-            }}
-          >
-            Transfer Batch
-          </Button>
-          <Button
-            onClick={() => {
-              navigate("/check-transaction");
-            }}
-          >
-            Check Transactions
-          </Button>
-          <Button
-            onClick={() => {
-              navigate("/check-batches");
-            }}
-          >
-            Check Batch Details (QR){" "}
-          </Button>
-        </div>
-      </div>
-    </>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

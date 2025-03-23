@@ -186,6 +186,16 @@ const abi = [
           { internalType: "address", name: "from", type: "address" },
           { internalType: "address", name: "to", type: "address" },
           { internalType: "uint256", name: "quantity", type: "uint256" },
+          {
+            internalType: "enum AdvancedSupplyChain.Role",
+            name: "fromRole",
+            type: "uint8",
+          },
+          {
+            internalType: "enum AdvancedSupplyChain.Role",
+            name: "toRole",
+            type: "uint8",
+          },
         ],
         internalType: "struct AdvancedSupplyChain.Transfer[]",
         name: "transfers",

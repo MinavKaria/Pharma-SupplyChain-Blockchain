@@ -10,7 +10,9 @@ import CheckTransactions from "@/pages/CheckTransactions";
 import CheckBatchDetails from "@/pages/CheckBatchDetails";
 import CheckAllBatches from "@/pages/CheckAllBatches";
 import CreateBatch from "@/pages/CreateBatch";
-import Test from "@/pages/Test";
+// import Test from "@/pages/Test";
+// import Test2 from "@/pages/Test2";
+import VerifyBatch from "@/pages/VerifyBatch";
 
 
 const router=createBrowserRouter([
@@ -20,7 +22,11 @@ const router=createBrowserRouter([
         children:[
             {
                 path:'/',
-                element:<Landing/>
+                element:(
+                    <>
+                        <Landing/>
+                    </>
+                )
             },
             {
                 path:'/profile',
@@ -94,11 +100,19 @@ const router=createBrowserRouter([
                     </>
                 )
             },
+            // {
+            //     path:"/test",
+            //     element:(
+            //         <>
+            //             <Test2/>
+            //         </>
+            //     )
+            // },
             {
-                path:"/test",
+                path:'/verify-batch',
                 element:(
                     <>
-                        <Test/>
+                        <VerifyBatch/>
                     </>
                 )
             }

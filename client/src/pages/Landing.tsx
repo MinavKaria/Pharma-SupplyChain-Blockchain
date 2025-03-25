@@ -80,13 +80,13 @@ function Landing() {
           <div className="container px-4 md:px-6">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl text-center mb-12">How It Works</h2>
             <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
-              <img
+              {/* <img
                 alt="Blockchain Process"
                 className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
                 height="550"
                 src="https://private-user-images.githubusercontent.com/119132631/406743834-b2130be5-dc0e-4843-82a7-3532d044a787.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Mzg2ODcyODEsIm5iZiI6MTczODY4Njk4MSwicGF0aCI6Ii8xMTkxMzI2MzEvNDA2NzQzODM0LWIyMTMwYmU1LWRjMGUtNDg0My04MmE3LTM1MzJkMDQ0YTc4Ny5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwMjA0JTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDIwNFQxNjM2MjFaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1iM2Q3NDhkMDRjYWQyZmZhMTBjMGE0ODVkNzMxZjJjYTM0NzcwZmE0MThmZGFmOGUxZDJmNDFiNmU1ZTJjNTY1JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.MddyZmlS88nCg9lIOvY-3fy2ag1SxMkiFZZwBuIYAwo"
                 width="550"
-              />
+              /> */}
               <div className="flex flex-col justify-center space-y-4">
                 <ol className="space-y-4">
                   <li className="flex items-center space-x-3">

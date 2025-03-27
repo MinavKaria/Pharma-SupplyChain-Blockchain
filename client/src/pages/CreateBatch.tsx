@@ -1,4 +1,3 @@
-
 import type React from "react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,13 +23,12 @@ import abi from "@/configs/abi";
 
 interface FormData {
   ProductName: string;
-  BatchNumber: string;
+  Description: string;
   ManufacturingDate: string;
   ExpiryDate: string;
   ManufacturerName: string;
   SupplierName: string;
   UnitPrice: string;
-  StorageConditions: string;
   Certification: string;
   CountryOfOrigin: string;
   DeliveryDate: string;
@@ -40,27 +38,29 @@ interface FormData {
 enum StorageCondition {
   Ambient = 0,
   Refrigerated = 1,
-  Frozen = 2
+  Frozen = 2,
 }
 
 export default function BatchCreation() {
   const [formData, setFormData] = useState<FormData>({
     ProductName: "",
-    BatchNumber: "",
+    Description: "",
     ManufacturingDate: "",
     ExpiryDate: "",
     ManufacturerName: "",
     SupplierName: "",
     UnitPrice: "",
-    StorageConditions: "",
     Certification: "",
     CountryOfOrigin: "",
     DeliveryDate: "",
   });
   const [quantity, setQuantity] = useState("");
-  const [storageCondition, setStorageCondition] = useState<StorageCondition>(StorageCondition.Ambient);
-  
-  const { writeContract, isPending, isSuccess, isError, error } = useWriteContract();
+  const [storageCondition, setStorageCondition] = useState<StorageCondition>(
+    StorageCondition.Ambient
+  );
+
+  const { writeContract, isPending, isSuccess, isError, error } =
+    useWriteContract();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -81,36 +81,36 @@ export default function BatchCreation() {
     try {
       // Convert ExpiryDate to unix timestamp (seconds since epoch)
       const expiryDateObject = new Date(formData.ExpiryDate);
-      const expiryDateTimestamp =Math.floor(expiryDateObject.getTime() / 1000);;
+      const expiryDateTimestamp = Math.floor(expiryDateObject.getTime() / 1000);
 
-      
       // Prepare product data as JSON string
       const productData = JSON.stringify(formData);
-      
+
       // Call the smart contract
       writeContract({
         abi,
-        address: import.meta.env.VITE_CONTRACT_ADDRESS, 
+        address: import.meta.env.VITE_CONTRACT_ADDRESS,
         functionName: "createBatch",
         args: [
-          JSON.stringify(productData), 
+          JSON.stringify(productData),
           Number(quantity),
           expiryDateTimestamp,
-          storageCondition
+          storageCondition,
         ],
       });
-      
+
       console.log("Transaction submitted");
       console.log("Product Data:", productData);
       console.log("Quantity:", quantity);
       console.log("Expiry Date (timestamp):", expiryDateTimestamp);
       console.log("Storage Condition:", storageCondition);
-      
     } catch (err) {
       console.error("Error submitting transaction:", err);
       toast({
         title: "Error",
-        description: "Failed to create batch: " + (err instanceof Error ? err.message : String(err)),
+        description:
+          "Failed to create batch: " +
+          (err instanceof Error ? err.message : String(err)),
         variant: "destructive",
       });
     }
@@ -121,19 +121,19 @@ export default function BatchCreation() {
     if (isSuccess) {
       toast({
         title: "Batch Created",
-        description: "Your batch has been successfully created and recorded on the blockchain.",
+        description:
+          "Your batch has been successfully created and recorded on the blockchain.",
       });
-      
+
       // Reset form
       setFormData({
         ProductName: "",
-        BatchNumber: "",
+        Description: "",
         ManufacturingDate: "",
         ExpiryDate: "",
         ManufacturerName: "",
         SupplierName: "",
         UnitPrice: "",
-        StorageConditions: "",
         Certification: "",
         CountryOfOrigin: "",
         DeliveryDate: "",
@@ -141,11 +141,13 @@ export default function BatchCreation() {
       setQuantity("");
       setStorageCondition(StorageCondition.Ambient);
     }
-    
+
     if (isError && error) {
       toast({
         title: "Transaction Failed",
-        description: error.message || "There was an error creating the batch on the blockchain.",
+        description:
+          error.message ||
+          "There was an error creating the batch on the blockchain.",
         variant: "destructive",
       });
     }
@@ -195,8 +197,8 @@ export default function BatchCreation() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="StorageCondition">Storage Condition</Label>
-              <Select 
-                value={storageCondition.toString()} 
+              <Select
+                value={storageCondition.toString()}
                 onValueChange={handleStorageConditionChange}
               >
                 <SelectTrigger>

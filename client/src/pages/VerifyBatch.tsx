@@ -13,18 +13,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, Search, Check, AlertTriangle, Clock } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+  ExternalLink,
+  Search,
+  Check,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import abi from "@/configs/abi";
 
 interface ProductData {
   ProductName: string;
-  BatchNumber: string;
+  Description: string;
   ManufacturingDate: string;
   ExpiryDate: string;
   ManufacturerName: string;
@@ -64,7 +66,7 @@ function VerifyBatch() {
     if (id) {
       try {
         // Handle possible JSON string or direct number
-        const parsedId = JSON.parse(id);
+        const parsedId = isNaN(Number(id)) ? id : Number(id);
         setBatchId(parsedId.toString());
         verifyBatch(parsedId.toString());
       } catch (e) {
@@ -78,10 +80,10 @@ function VerifyBatch() {
     address: import.meta.env.VITE_CONTRACT_ADDRESS as `0x${string}`,
     abi: abi,
     functionName: "getBatchDetails",
-    args: [batchId ? BigInt(batchId) : BigInt(0)],
+    args: [batchId && !isNaN(Number(batchId)) ? BigInt(batchId) : BigInt(0)],
   });
 
-  console.log(data)
+  console.log(data);
 
   const verifyBatch = async (id: string) => {
     if (!id) {
@@ -96,11 +98,26 @@ function VerifyBatch() {
 
     try {
       const result = await refetch();
-      
-      if (result.data) {
-        const [productData, quantity, creator, chainOfCustody, transfers, expiryDate, storageCondition] = 
-          result.data as [string, bigint, string, string[], any[], bigint, number];
-        
+
+      if (result?.data) {
+        const [
+          productData,
+          quantity,
+          creator,
+          chainOfCustody,
+          transfers,
+          expiryDate,
+          storageCondition,
+        ] = result.data as [
+          string,
+          bigint,
+          string,
+          string[],
+          any[],
+          bigint,
+          number
+        ];
+
         let parsedProductData: ProductData | undefined;
         try {
           const jsonString = JSON.parse(productData);
@@ -120,22 +137,22 @@ function VerifyBatch() {
           chainOfCustody,
           transfers,
           expiryDate: Number(expiryDate),
-          storageCondition
+          storageCondition,
         };
 
         // Calculate transferred quantity from transfers
         let totalTransferred = 0;
         if (transfers && transfers.length > 0) {
           for (const transfer of transfers) {
-            if (transfer.fromRole === 0) { // Role.Manufacturer = 0
+            if (transfer?.fromRole === 0) {
               totalTransferred += Number(transfer.quantity);
             }
           }
         }
-        
+
         batchObj.quantityTransferred = totalTransferred;
         batchObj.remaining = batchObj.quantity - totalTransferred;
-        
+
         setBatch(batchObj);
         setVerified(true);
       } else {
@@ -150,7 +167,9 @@ function VerifyBatch() {
   };
 
   const truncateAddress = (address: string): string => {
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+    return `${address.substring(0, 6)}...${address.substring(
+      address.length - 4
+    )}`;
   };
 
   const formatDate = (timestamp: number): string => {
@@ -160,10 +179,14 @@ function VerifyBatch() {
 
   const getStorageConditionText = (condition: number): string => {
     switch (condition) {
-      case 0: return "Normal";
-      case 1: return "Refrigerated";
-      case 2: return "Frozen";
-      default: return "Unknown";
+      case 0:
+        return "Normal";
+      case 1:
+        return "Refrigerated";
+      case 2:
+        return "Frozen";
+      default:
+        return "Unknown";
     }
   };
 
@@ -188,11 +211,12 @@ function VerifyBatch() {
               value={batchId}
               onChange={(e) => setBatchId(e.target.value)}
             />
-            <Button 
-              onClick={() => verifyBatch(batchId)}
-              disabled={loading}
-            >
-              {loading ? <Skeleton className="h-4 w-16" /> : <Search className="mr-2 h-4 w-4" />}
+            <Button onClick={() => verifyBatch(batchId)} disabled={loading}>
+              {loading ? (
+                <Skeleton className="h-4 w-16" />
+              ) : (
+                <Search className="mr-2 h-4 w-4" />
+              )}
               Verify
             </Button>
           </div>
@@ -209,7 +233,9 @@ function VerifyBatch() {
             <div className="space-y-6">
               <Alert variant="default" className="bg-green-50 border-green-200">
                 <Check className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-600">Verification Successful</AlertTitle>
+                <AlertTitle className="text-green-600">
+                  Verification Successful
+                </AlertTitle>
                 <AlertDescription>
                   This batch has been verified on the blockchain
                 </AlertDescription>
@@ -219,30 +245,31 @@ function VerifyBatch() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-lg font-bold">
-                      {batch.parsedProductData?.ProductName || `Batch #${batch.id}`}
+                      {batch.parsedProductData?.ProductName ||
+                        `Batch #${batch.id}`}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Batch #{batch.parsedProductData?.BatchNumber || batch.id}
+                      {batch.parsedProductData?.Description}
                     </p>
                   </div>
-                  <Badge 
+                  <Badge
                     variant={
-                      batch.remaining === 0 
-                        ? "destructive" 
-                        : batch.remaining < batch.quantity / 4 
-                          ? "secondary" 
-                          : batch.expiryDate && isExpired(batch.expiryDate)
-                            ? "outline"
-                            : "default"
+                      batch.remaining === 0
+                        ? "destructive"
+                        : batch.remaining < batch.quantity / 4
+                        ? "secondary"
+                        : batch.expiryDate && isExpired(batch.expiryDate)
+                        ? "outline"
+                        : "default"
                     }
                   >
-                    {batch.remaining === 0 
-                      ? "Depleted" 
-                      : batch.remaining < batch.quantity / 4 
-                        ? "Low Stock" 
-                        : batch.expiryDate && isExpired(batch.expiryDate)
-                          ? "Expired"
-                          : "Available"}
+                    {batch.remaining === 0
+                      ? "Depleted"
+                      : batch.remaining < batch.quantity / 4
+                      ? "Low Stock"
+                      : batch.expiryDate && isExpired(batch.expiryDate)
+                      ? "Expired"
+                      : "Available"}
                   </Badge>
                 </div>
 
@@ -250,39 +277,52 @@ function VerifyBatch() {
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="font-semibold">Manufacturer:</div>
-                  <div>{batch.parsedProductData?.ManufacturerName || "N/A"}</div>
-                  
+                  <div>
+                    {batch.parsedProductData?.ManufacturerName || "N/A"}
+                  </div>
+
                   <div className="font-semibold">Supplier:</div>
                   <div>{batch.parsedProductData?.SupplierName || "N/A"}</div>
-                  
+
                   <div className="font-semibold">Country of Origin:</div>
                   <div>{batch.parsedProductData?.CountryOfOrigin || "N/A"}</div>
-                  
+
                   <div className="font-semibold">Unit Price:</div>
                   <div>{batch.parsedProductData?.UnitPrice || "N/A"}</div>
-                  
+
                   <div className="font-semibold">Manufacturing Date:</div>
-                  <div>{batch.parsedProductData?.ManufacturingDate 
-                    ? new Date(batch.parsedProductData.ManufacturingDate).toLocaleDateString() 
-                    : "N/A"}
+                  <div>
+                    {batch.parsedProductData?.ManufacturingDate
+                      ? new Date(
+                          batch.parsedProductData.ManufacturingDate
+                        ).toLocaleDateString()
+                      : "N/A"}
                   </div>
-                  
+
                   <div className="font-semibold">Expiry Date:</div>
-                  <div className={`${batch.expiryDate && isExpired(batch.expiryDate) ? "text-red-500 font-medium" : ""}`}>
-                    {batch.expiryDate 
-                      ? formatDate(batch.expiryDate) 
-                      : batch.parsedProductData?.ExpiryDate 
-                        ? new Date(batch.parsedProductData.ExpiryDate).toLocaleDateString()
-                        : "N/A"}
+                  <div
+                    className={`${
+                      batch.expiryDate && isExpired(batch.expiryDate)
+                        ? "text-red-500 font-medium"
+                        : ""
+                    }`}
+                  >
+                    {batch.expiryDate
+                      ? formatDate(batch.expiryDate)
+                      : batch.parsedProductData?.ExpiryDate
+                      ? new Date(
+                          batch.parsedProductData.ExpiryDate
+                        ).toLocaleDateString()
+                      : "N/A"}
                   </div>
-                  
+
                   <div className="font-semibold">Storage Conditions:</div>
                   <div>
-                    {batch.storageCondition !== undefined 
-                      ? getStorageConditionText(batch.storageCondition) 
+                    {batch.storageCondition !== undefined
+                      ? getStorageConditionText(batch.storageCondition)
                       : batch.parsedProductData?.StorageConditions || "N/A"}
                   </div>
-                  
+
                   <div className="font-semibold">Certification:</div>
                   <div>{batch.parsedProductData?.Certification || "N/A"}</div>
 
@@ -301,16 +341,16 @@ function VerifyBatch() {
                     <div className="font-semibold">Created By:</div>
                     <div className="flex items-center">
                       {truncateAddress(batch.creator)}
-                      <a 
-                        href={`https://sepolia.etherscan.io/address/${batch.creator}`} 
-                        target="_blank" 
+                      <a
+                        href={`https://sepolia.etherscan.io/address/${batch.creator}`}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="ml-1"
                       >
                         <ExternalLink size={14} />
                       </a>
                     </div>
-                    
+
                     <div className="font-semibold">Chain of Custody:</div>
                     <div>{batch.chainOfCustody?.length || 0} transfers</div>
                   </div>
@@ -321,7 +361,8 @@ function VerifyBatch() {
                     <Clock className="h-4 w-4" />
                     <AlertTitle>Expired Product</AlertTitle>
                     <AlertDescription>
-                      This product has passed its expiration date of {formatDate(batch.expiryDate)}.
+                      This product has passed its expiration date of{" "}
+                      {formatDate(batch.expiryDate)}.
                     </AlertDescription>
                   </Alert>
                 )}

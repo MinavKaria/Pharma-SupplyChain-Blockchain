@@ -80,6 +80,7 @@ contract AdvancedSupplyChain is Ownable(msg.sender) {
     function createBatch(string memory _productData, uint256 _quantity, uint256 _expiryDate, StorageCondition _storageCondition) external onlyRole(Role.Manufacturer) returns (uint256) {
         require(_quantity != 0, "Quantity must be greater than zero");
         require(_expiryDate > block.timestamp, "Expiry date must be in the future");
+        
 
         uint256 batchId = batches.length;
         batchQuantities[batchId][msg.sender] = _quantity;
@@ -170,7 +171,8 @@ contract AdvancedSupplyChain is Ownable(msg.sender) {
         string[] memory, 
         uint256[] memory, 
         address[] memory,
-        uint256[] memory
+        uint256[] memory,
+        StorageCondition[] memory
     ) {
         uint256 length = batches.length;
         uint256[] memory ids = new uint256[](length);
@@ -178,6 +180,7 @@ contract AdvancedSupplyChain is Ownable(msg.sender) {
         uint256[] memory quantities = new uint256[](length);
         address[] memory creators = new address[](length);
         uint256[] memory quantityTransferred= new uint256[](length);
+        StorageCondition[] memory storageConditions= new StorageCondition[](length);
 
 
         for (uint256 i = 0; i < length; ++i) {
@@ -187,9 +190,10 @@ contract AdvancedSupplyChain is Ownable(msg.sender) {
             quantities[i] = batch.quantity;
             creators[i] = batch.creator;
             quantityTransferred[i]=batch.quantityTransferred;
+            storageConditions[i]=batches[i].storageCondition;
         }
 
-        return (ids, productDatas, quantities, creators,quantityTransferred);
+        return (ids, productDatas, quantities, creators,quantityTransferred,storageConditions);
     }
 
     function getTransfersByAddress(address _user) external view returns (
@@ -255,6 +259,3 @@ contract AdvancedSupplyChain is Ownable(msg.sender) {
         }
 
 } 
-
-
-// Using Remix IDE to deploy the contract

@@ -58,7 +58,9 @@ interface Batch {
   quantityTransferred: number;
   remaining: number;
   parsedProductData?: ProductData;
+  storageCondition: string;
 }
+
 
 function CheckAllBatches(): JSX.Element {
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -70,10 +72,17 @@ function CheckAllBatches(): JSX.Element {
     functionName: "getAllBatches",
   });
 
+  const storageConditionMap: Record<number, string> ={
+    0: "Ambient",
+    1: "Refrigerated",
+    2: "Frozen",
+  }
+
   useEffect(() => {
     if (data) {
-      const [ids, productDatas, quantities, creators, quantityTransferred] =
-        data as [bigint[], string[], bigint[], string[], bigint[]];
+      const [ids, productDatas, quantities, creators, quantityTransferred, storageCondition] =
+
+        data as [bigint[], string[], bigint[], string[], bigint[], number[]];
 
       const batchObjects = ids.map((id, index) => {
         let parsedProductData: ProductData | undefined;
@@ -84,6 +93,8 @@ function CheckAllBatches(): JSX.Element {
           console.error("Error parsing product data:", e);
         }
 
+        console.log("Storage Condition:", storageCondition[index]);
+
         return {
           id: Number(id),
           productData: productDatas[index],
@@ -93,6 +104,7 @@ function CheckAllBatches(): JSX.Element {
           remaining:
             Number(quantities[index]) - Number(quantityTransferred[index]),
           parsedProductData,
+          storageCondition:storageConditionMap[storageCondition[index]]
         };
       });
 
@@ -130,7 +142,6 @@ function CheckAllBatches(): JSX.Element {
     )}`;
   };
 
-  // Copy QR content to clipboard
   const copyToClipboard = (content: string): void => {
     navigator.clipboard
       .writeText(content)
@@ -261,7 +272,7 @@ function CheckAllBatches(): JSX.Element {
 
                                   <div className="font-semibold">Storage:</div>
                                   <div>
-                                    {/* {batch.parsedProductData.storageConditions} */}
+                                    {batch.storageCondition}
                                   </div>
 
                                   <div className="font-semibold">

@@ -20,6 +20,8 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useWriteContract } from "wagmi";
 import abi from "@/configs/abi";
+import { getNames } from "country-list";  
+import UserBatches from "@/components/userBatch";
 
 interface FormData {
   ProductName: string;
@@ -34,7 +36,6 @@ interface FormData {
   DeliveryDate: string;
 }
 
-// Enum to match the contract's StorageCondition enum
 enum StorageCondition {
   Ambient = 0,
   Refrigerated = 1,
@@ -54,13 +55,13 @@ export default function BatchCreation() {
     CountryOfOrigin: "",
     DeliveryDate: "",
   });
+
   const [quantity, setQuantity] = useState("");
   const [storageCondition, setStorageCondition] = useState<StorageCondition>(
     StorageCondition.Ambient
   );
 
-  const { writeContract, isPending, isSuccess, isError, error } =
-    useWriteContract();
+  const { writeContract, isPending, isSuccess, isError, error } = useWriteContract();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -75,18 +76,22 @@ export default function BatchCreation() {
     setStorageCondition(Number(value) as StorageCondition);
   };
 
+  const handleCountryChange = (value: string) => {
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      CountryOfOrigin: value,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // Convert ExpiryDate to unix timestamp (seconds since epoch)
       const expiryDateObject = new Date(formData.ExpiryDate);
       const expiryDateTimestamp = Math.floor(expiryDateObject.getTime() / 1000);
 
-      // Prepare product data as JSON string
       const productData = JSON.stringify(formData);
 
-      // Call the smart contract
       writeContract({
         abi,
         address: import.meta.env.VITE_CONTRACT_ADDRESS,
@@ -108,24 +113,21 @@ export default function BatchCreation() {
       console.error("Error submitting transaction:", err);
       toast({
         title: "Error",
-        description:
-          "Failed to create batch: " +
-          (err instanceof Error ? err.message : String(err)),
+        description: `Failed to create batch: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
         variant: "destructive",
       });
     }
   };
 
-  // Handle transaction states
   useEffect(() => {
     if (isSuccess) {
       toast({
         title: "Batch Created",
-        description:
-          "Your batch has been successfully created and recorded on the blockchain.",
+        description: "Your batch has been successfully created and recorded on the blockchain.",
       });
 
-      // Reset form
       setFormData({
         ProductName: "",
         Description: "",
@@ -145,13 +147,13 @@ export default function BatchCreation() {
     if (isError && error) {
       toast({
         title: "Transaction Failed",
-        description:
-          error.message ||
-          "There was an error creating the batch on the blockchain.",
+        description: error.message || "There was an error creating the batch on the blockchain.",
         variant: "destructive",
       });
     }
   }, [isSuccess, isError, error]);
+
+  const countries = getNames();
 
   return (
     <div className="max-w-4xl mx-auto p-4 mb-5">
@@ -165,24 +167,45 @@ export default function BatchCreation() {
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-3 gap-4">
             {Object.keys(formData).map((key, index) => (
-              <div
-                key={key}
-                className={`space-y-2 ${
-                  (index + 1) % 3 !== 0 ? "border-r pr-4" : ""
-                }`}
-              >
-                <Label htmlFor={key}>
-                  {key.replace(/([A-Z])/g, " $1").trim()}
-                </Label>
-                <Input
-                  id={key}
-                  name={key}
-                  type={key.includes("Date") ? "date" : "text"}
-                  value={(formData as any)[key]}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+              key !== "CountryOfOrigin" ? (
+                <div
+                  key={key}
+                  className={`space-y-2 ${
+                    (index + 1) % 3 !== 0 ? "border-r pr-4" : ""
+                  }`}
+                >
+                  <Label htmlFor={key}>
+                    {key.replace(/([A-Z])/g, " $1").trim()}
+                  </Label>
+                  <Input
+                    id={key}
+                    name={key}
+                    type={key.includes("Date") ? "date" : "text"}
+                    value={(formData as any)[key]}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              ) : (
+                <div key={key} className="space-y-2">
+                  <Label htmlFor={key}>Country of Origin</Label>
+                  <Select
+                    value={formData.CountryOfOrigin}
+                    onValueChange={handleCountryChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )
             ))}
             <div className="space-y-2">
               <Label htmlFor="Quantity">Quantity</Label>
@@ -222,6 +245,9 @@ export default function BatchCreation() {
           </form>
         </CardContent>
       </Card>
+      <div className="mt-8">
+      <UserBatches/>
+      </div>
     </div>
   );
 }

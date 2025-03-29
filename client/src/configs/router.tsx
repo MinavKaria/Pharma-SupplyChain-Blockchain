@@ -12,7 +12,7 @@ import CheckAllBatches from "@/pages/CheckAllBatches";
 import CreateBatch from "@/pages/CreateBatch";
 import VerifyBatch from "@/pages/VerifyBatch";
 // import Test from "@/pages/Test";
-import Test2 from "@/pages/Test2";
+// import Test2 from "@/pages/Test2";
 
 const router = createBrowserRouter([
   {
@@ -99,14 +99,14 @@ const router = createBrowserRouter([
           </>
         ),
       },
-      {
-        path: "/test",
-        element: (
-          <>
-            <Test2 />
-          </>
-        ),
-      },
+      // {
+      //   path: "/test",
+      //   element: (
+      //     <>
+      //       <Test2/>
+      //     </>
+      //   ),
+      // },
       {
         path: "/verify-batch",
         element: (

@@ -169,6 +169,11 @@ const abi = [
       { internalType: "uint256[]", name: "", type: "uint256[]" },
       { internalType: "address[]", name: "", type: "address[]" },
       { internalType: "uint256[]", name: "", type: "uint256[]" },
+      {
+        internalType: "enum AdvancedSupplyChain.StorageCondition[]",
+        name: "",
+        type: "uint8[]",
+      },
     ],
     stateMutability: "view",
     type: "function",
@@ -306,4 +311,5 @@ const abi = [
     type: "function",
   },
 ];
+
 export default abi;

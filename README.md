@@ -11,7 +11,7 @@ Tech Stack
 - **Ethereum**: A decentralized blockchain platform that serves as the underlying infrastructure for the smart contracts.
 - **Solidity**: The programming language used to write smart contracts deployed on the Ethereum blockchain.
 - **Hardhat**: A development environment for Ethereum that helps with testing, deployment, and debugging of Solidity contracts.
-- **Remix IDE**: An online integrated development environment used for writing, testing, and deploying smart contracts. The contract is deployed at address `0xafaC7C3A1641bba718B8A092B8E527D855D46708`.
+- **Remix IDE**: An online integrated development environment used for writing, testing, and deploying smart contracts. The contract is deployed at address `0xD09d5Aa3018498d70d148eE8f87ba14256C46389`.
 
 ### Frontend:
 - **Vite+React**: A JavaScript library for building user interfaces. React is used for creating the frontend of the DApp.
@@ -36,8 +36,14 @@ Tech Stack
 
 Smart Contract Structure.
 
-![image](https://github.com/user-attachments/assets/b2130be5-dc0e-4843-82a7-3532d044a787)
+![image](https://github.com/user-attachments/assets/3f03cbf3-c5b2-4bff-a068-14cea6628239)
 
 System Architecture.
 
-To be made
+![image](https://github.com/user-attachments/assets/8359811b-d993-4f3d-8787-483354dc35ef)
+
+User Flow Diagram:
+
+![image](https://github.com/user-attachments/assets/1bace07a-576b-4855-8179-90164a9c7504)
+
+

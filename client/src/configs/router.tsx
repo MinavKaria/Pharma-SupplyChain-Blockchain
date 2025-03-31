@@ -6,11 +6,12 @@ import RoleApplicationForm from "@/pages/ApplyForRole";
 import Navigation from "@/pages/Navigation";
 import AssignRole from "@/pages/AssignRole";
 import TransferBatches from "@/pages/TransferBatches";
-import CheckTransactions from "@/pages/CheckTransactions";
+// import CheckTransactions from "@/pages/CheckTransactions";
 import CheckBatchDetails from "@/pages/CheckBatchDetails";
 import CheckAllBatches from "@/pages/CheckAllBatches";
 import CreateBatch from "@/pages/CreateBatch";
 import VerifyBatch from "@/pages/VerifyBatch";
+import Fake from "@/pages/Fake";
 // import Test from "@/pages/Test";
 // import Test2 from "@/pages/Test2";
 
@@ -79,7 +80,8 @@ const router = createBrowserRouter([
         path: "/check-transaction",
         element: (
           <>
-            <CheckTransactions />
+            {/* <CheckTransactions /> */}
+            <Fake/>
           </>
         ),
       },

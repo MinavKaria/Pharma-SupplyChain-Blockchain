@@ -71,8 +71,6 @@ const SupplyChainVisualizer = () => {
     }
   );
 
-  
-
   const { data: batchDetails, isLoading: isLoadingDetails } = useReadContract({
     address: import.meta.env.VITE_CONTRACT_ADDRESS as `0x${string}`,
     abi: contractAbi,
@@ -81,8 +79,12 @@ const SupplyChainVisualizer = () => {
   });
 
   useEffect(() => {
-    if (allBatchesData && Array.isArray(allBatchesData) && allBatchesData.length > 0) {
-      const ids = allBatchesData[0] as bigint[]; 
+    if (
+      allBatchesData &&
+      Array.isArray(allBatchesData) &&
+      allBatchesData.length > 0
+    ) {
+      const ids = allBatchesData[0] as bigint[];
       setBatchIds(ids.map((id) => Number(id)));
 
       if (selectedBatch === null && ids.length > 0) {
@@ -92,7 +94,10 @@ const SupplyChainVisualizer = () => {
   }, [allBatchesData, selectedBatch]);
   useEffect(() => {
     if (batchDetails && selectedBatch !== null) {
-      const transfers = batchDetails && Array.isArray(batchDetails) ? batchDetails[4] as ContractBatchTransfer[] : [];
+      const transfers =
+        batchDetails && Array.isArray(batchDetails)
+          ? (batchDetails[4] as ContractBatchTransfer[])
+          : [];
 
       const roleMap: Record<number, string> = {
         0: "Customer",
@@ -100,7 +105,6 @@ const SupplyChainVisualizer = () => {
         2: "Distributor",
         3: "Retailer",
       };
-
 
       const formattedTransfers = transfers.map((transfer) => ({
         batchId: selectedBatch.toString(),
@@ -141,7 +145,6 @@ const SupplyChainVisualizer = () => {
     }
   }, [transferData, dimensions, loading]);
 
-
   const truncateAddress = (address: string): string => {
     if (!address || address.length <= 8) return address;
     return `${address.substring(0, 6)}...${address.substring(
@@ -149,11 +152,9 @@ const SupplyChainVisualizer = () => {
     )}`;
   };
 
-
   const toggleTable = () => {
     setShowTable(!showTable);
   };
-
 
   const renderGraph = () => {
     const { width, height } = dimensions;
@@ -169,12 +170,10 @@ const SupplyChainVisualizer = () => {
       .style("background", "#f9f9f9")
       .style("border-radius", "8px");
 
-  
     const buildHierarchy = (transfers: Transfer[]): HierarchyResult | null => {
       const firstTransfer = transfers.find(
         (t) => t.fromRole === "Manufacturer"
       );
-
 
       if (!firstTransfer && transfers.length > 0) {
         console.log(
@@ -226,14 +225,12 @@ const SupplyChainVisualizer = () => {
 
       const processedNodes = new Set<string>([root.id]);
 
-
       const edges: Edge[] = [];
 
       const addChildren = (
         node: HierarchyNode,
         transfers: Transfer[]
       ): void => {
-     
         const outgoingTransfers = transfers.filter((t) => t.from === node.id);
 
         outgoingTransfers.forEach((transfer) => {
@@ -363,7 +360,7 @@ const SupplyChainVisualizer = () => {
     });
 
     // Draw links with quantity labels
-    Object.values(edgeGroups).forEach((groupedEdges, index) => {
+    Object.values(edgeGroups).forEach((groupedEdges) => {
       const sourceId = groupedEdges[0].source;
       const targetId = groupedEdges[0].target;
 
@@ -372,28 +369,25 @@ const SupplyChainVisualizer = () => {
 
       if (!sourcePos || !targetPos) return;
 
-      // Find source node data to determine role and color
       const sourceNode = treeData
         .descendants()
         .find((d) => d.data.id === sourceId);
       const sourceRole = sourceNode ? sourceNode.data.role : "Unknown";
 
-      // Define link colors that are clearly different from node colors
       const linkColorMap: Record<string, string> = {
-        Manufacturer: "#FF9999", // Light red
-        Distributor: "#6BDFCF", // Light teal - adjusted to be different
-        Retailer: "#A7B4E0", // Light purple-blue - very different from teal
-        Customer: "#C3F0CD", // Light green
-        Unknown: "#BBBBBB", // Light gray
+        Manufacturer: "#FF9999",
+        Distributor: "#6BDFCF",
+        Retailer: "#A7B4E0",
+        Customer: "#C3F0CD",
+        Unknown: "#BBBBBB",
       };
 
-      // Define card colors that are darker than links for better visibility
       const cardColorMap: Record<string, string> = {
-        Manufacturer: "#FFD6D6", // Very light pink background for cards
-        Distributor: "#D0F5F1", // Very light teal background
-        Retailer: "#D6DEFA", // Very light purple-blue background
-        Customer: "#DBF7E3", // Very light green background
-        Unknown: "#E0E0E0", // Very light gray
+        Manufacturer: "#FFD6D6",
+        Distributor: "#D0F5F1",
+        Retailer: "#D6DEFA",
+        Customer: "#DBF7E3",
+        Unknown: "#E0E0E0",
       };
 
       const linkColor = linkColorMap[sourceRole] || linkColorMap.Unknown;
@@ -404,49 +398,44 @@ const SupplyChainVisualizer = () => {
         0
       );
 
+      // Calculate the arc path
+      const dx = targetPos.y - sourcePos.y;
+      const dy = targetPos.x - sourcePos.x;
+      const dr = Math.sqrt(dx * dx + dy * dy) * 1.8; // Increased curve factor for visibility
+      const pathData = `M${sourcePos.y},${sourcePos.x}A${dr},${dr} 0 0,1 ${targetPos.y},${targetPos.x}`;
+
       g.append("path")
         .attr("class", "link")
-        .attr("d", () => {
-          const dx = targetPos.y - sourcePos.y;
-          const dy = targetPos.x - sourcePos.x;
-          const dr = Math.sqrt(dx * dx + dy * dy) * 1.8;
-          return `M${sourcePos.y},${sourcePos.x}A${dr},${dr} 0 0,1 ${targetPos.y},${targetPos.x}`;
-        })
+        .attr("d", pathData)
         .attr("fill", "none")
         .attr("stroke", linkColor)
         .attr("stroke-width", Math.sqrt(totalQuantity) / 2 + 1)
         .attr("stroke-opacity", 0.8);
 
-    
-      const offset = (index % 5) * 10; 
-      const baseAngle = Math.atan2(
+      // --- Simplified Midpoint Calculation ---
+      // Calculate the midpoint of the straight line between source and target
+      const midX = (sourcePos.x + targetPos.x) / 2;
+      const midY = (sourcePos.y + targetPos.y) / 2;
+
+      // Calculate the angle of the straight line
+      const angle = Math.atan2(
         targetPos.x - sourcePos.x,
         targetPos.y - sourcePos.y
       );
 
+      // Define a fixed perpendicular offset to lift the label off the curve
+      const perpendicularOffset = 30; // Adjust this value as needed
 
-      // const linkLength = Math.sqrt(
-      //   Math.pow(targetPos.x - sourcePos.x, 2) +
-      //     Math.pow(targetPos.y - sourcePos.y, 2)
-      // );
-
-      const position = 0.5 + ((index % 3) - 1) * 0.15; // Positions at 0.35, 0.5, or 0.65 along the path
-
-      const midpoint = {
-        x:
-          sourcePos.x +
-          (targetPos.x - sourcePos.x) * position +
-          Math.sin(baseAngle) * (35 + offset),
-        y:
-          sourcePos.y +
-          (targetPos.y - sourcePos.y) * position -
-          Math.cos(baseAngle) * (35 + offset),
+      const labelPos = {
+        x: midX + Math.sin(angle) * perpendicularOffset,
+        y: midY - Math.cos(angle) * perpendicularOffset,
       };
+      // --- End of Simplified Midpoint Calculation ---
 
-      // Create a background rectangle for the quantity with role-based color
+      // Create a background rectangle for the quantity
       g.append("rect")
-        .attr("x", midpoint.y - 25)
-        .attr("y", midpoint.x - 10)
+        .attr("x", labelPos.y - 25) // Center the rect around labelPos.y
+        .attr("y", labelPos.x - 10) // Center the rect around labelPos.x
         .attr("width", 50)
         .attr("height", 20)
         .attr("fill", cardColor)
@@ -457,19 +446,19 @@ const SupplyChainVisualizer = () => {
 
       // Add quantity text
       g.append("text")
-        .attr("x", midpoint.y)
-        .attr("y", midpoint.x + 5)
+        .attr("x", labelPos.y) // Center the text
+        .attr("y", labelPos.x + 5) // Adjust vertical position within the rect
         .attr("text-anchor", "middle")
         .attr("fill", "#333")
         .attr("font-size", "11px")
         .attr("font-weight", "bold")
         .text(`Qty: ${totalQuantity}`);
 
-      // If there are multiple transfers, add a note - only for significant counts
+      // If there are multiple transfers, add a note
       if (groupedEdges.length > 1) {
         g.append("text")
-          .attr("x", midpoint.y)
-          .attr("y", midpoint.x + 20)
+          .attr("x", labelPos.y)
+          .attr("y", labelPos.x + 20) // Position below the main text
           .attr("text-anchor", "middle")
           .attr("fill", "#555")
           .attr("font-size", "9px")
@@ -851,7 +840,6 @@ const SupplyChainVisualizer = () => {
     </div>
   );
 };
-
 
 interface SupplyChainPageProps {}
 
